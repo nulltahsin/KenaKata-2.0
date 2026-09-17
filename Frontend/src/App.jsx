@@ -62,7 +62,11 @@ function App() {
 
             <Route
               path="/cart"
-              element={<Cart />}
+              element={
+                <ProtectedRoute roles={['CUSTOMER']}>
+                  <Cart />
+                </ProtectedRoute>
+              }
             />
 
             <Route
@@ -110,7 +114,7 @@ function App() {
             <Route
               path="/wishlist"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute roles={['CUSTOMER']}>
                   <Wishlist />
                 </ProtectedRoute>
               }

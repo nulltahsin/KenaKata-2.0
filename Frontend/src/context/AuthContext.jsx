@@ -35,9 +35,11 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error('Logout request failed', error);
     }
+
     setUser(null);
     localStorage.removeItem('kenakata_user');
     localStorage.removeItem('token');
+    localStorage.removeItem('kenakata_cart_guest');
   };
 
   const updateUser = (updates) => {
