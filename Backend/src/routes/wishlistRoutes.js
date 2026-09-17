@@ -8,6 +8,16 @@ const verifyToken = require("../middleware/authMiddleware");
 
 const checkRole = require("../middleware/roleMiddleware");
 
+const wishlistTableReady = pool.query(`
+  CREATE TABLE IF NOT EXISTS wishlist (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, product_id)
+  )
+`);
+
 
 //wishlist e product add korbe only CUSTOMER
 
@@ -26,44 +36,28 @@ checkRole("CUSTOMER"),
  async (req, res) => {
 
   try {
+    await wishlistTableReady;
 
 
-    const { product_id } = req.body;
+    const product_id = req.body.product_id || req.body.productId;
 
 
-    const customer_id = req.user.user_id;
+    const user_id = req.user.user_id || req.user.id;
+
+    if (!Number(product_id)) {
+      return res.status(400).json({ message: "product_id is required" });
+    }
     //logged in customer er id
     //server nijer moto identify korbe, user fake id dite parbe na
 
 
 
     const result = await pool.query(
-
-      `
-
-      INSERT INTO wishlists
-
-      (
-
-          customer_id,
-
-          product_id
-
-      )
-
-      VALUES($1,$2)
-
-      RETURNING *
-
-      `,
-
-      [
-
-        customer_id,
-
-        product_id
-
-      ]
+      `INSERT INTO wishlist (user_id, product_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, product_id) DO NOTHING
+       RETURNING *`,
+      [user_id, product_id]
 
     );
 
@@ -71,9 +65,8 @@ checkRole("CUSTOMER"),
 
     res.status(201).json({
 
-      message: "Wishlist added successfully",
-
-      wishlist: result.rows[0],
+      message: "Added to wishlist",
+      wishlist: result.rows[0] || { user_id, product_id },
 
     });
 
@@ -89,6 +82,34 @@ checkRole("CUSTOMER"),
 
   }
 
+});
+
+router.get("/", verifyToken, checkRole("CUSTOMER"), async (req, res) => {
+  try {
+    await wishlistTableReady;
+    const result = await pool.query(
+      `SELECT w.id, w.user_id, w.product_id,
+              p.name, p.price, p.stock_qty, p.image_url, s.store_name
+       FROM wishlist w
+       JOIN products p ON p.product_id = w.product_id
+       LEFT JOIN stores s ON s.store_id = p.store_id
+       WHERE w.user_id = $1
+       ORDER BY w.id DESC`,
+      [req.user.user_id || req.user.id]
+    );
+
+    res.json(result.rows.map((row) => ({
+      ...row,
+      wishlist_id: row.id,
+      id: row.product_id,
+      image: row.image_url,
+      store: row.store_name,
+      stock: row.stock_qty,
+    })));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
 });
 
 
@@ -114,6 +135,13 @@ checkRole("CUSTOMER"),
 
   try {
 
+    const requestedId = req.params.id === "me" ? req.user.user_id : Number(req.params.id);
+
+    if (requestedId !== req.user.user_id) {
+      return res.status(403).json({
+        message: "Access denied. You can only access your own wishlist."
+      });
+    }
 
     const customer_id = req.user.user_id;
     //logged in customer er id
@@ -195,11 +223,13 @@ checkRole("CUSTOMER"),
 
   try {
 
+    await wishlistTableReady;
 
-    const wishlist_id = req.params.id;
+
+    const requested_id = req.params.id;
 
 
-    const customer_id = req.user.user_id;
+    const user_id = req.user.user_id || req.user.id;
     //logged in customer er id
 
 
@@ -210,11 +240,9 @@ checkRole("CUSTOMER"),
 
       `
 
-      DELETE FROM wishlists
-
-      WHERE wishlist_id=$1
-
-      AND customer_id=$2
+      DELETE FROM wishlist
+      WHERE (id = $1 OR product_id = $1)
+        AND user_id = $2
 
       RETURNING *
 
@@ -222,9 +250,9 @@ checkRole("CUSTOMER"),
 
       [
 
-        wishlist_id,
+        requested_id,
 
-        customer_id
+        user_id
 
       ]
 

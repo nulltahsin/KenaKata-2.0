@@ -19,6 +19,14 @@ function VendorDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const normalizeStore = (response) => {
+    const savedStore = response?.store || response || {};
+    return {
+      ...savedStore,
+      categories: [...new Set(String(savedStore.category || '').split(',').map((tag) => tag.trim()).filter(Boolean))],
+    };
+  };
+
   async function loadDashboard() {
     setLoading(true);
     setError('');
@@ -29,7 +37,7 @@ function VendorDashboard() {
         getVendorOrders(),
         getVendorReservations(),
       ]);
-      setStore(vendorStore);
+      setStore(vendorStore ? normalizeStore(vendorStore) : null);
       setMarkets(marketList);
       setOrders(orderList);
       setReservations(reservationList);
@@ -46,9 +54,10 @@ function VendorDashboard() {
   }, []);
 
   const handleStoreSaved = (savedStore) => {
-    setStore(savedStore);
+    setStore(normalizeStore(savedStore));
     setEditingShop(false);
     setActiveSection('analytics');
+    loadDashboard();
   };
 
   const navigation = [

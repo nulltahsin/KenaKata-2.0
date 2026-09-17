@@ -324,6 +324,10 @@ export async function getRelatedProducts(productId) {
     .slice(0, 4);
 }
 export async function getWishlistProducts() {
-  const response = await api.get('/api/wishlist/customer/me');
-  return response.data.map(normalizeProduct);
+  const response = await api.get('/api/wishlist');
+  return response.data.map((product) => ({
+    ...normalizeProduct(product),
+    wishlist_id: product.wishlist_id,
+    id: product.product_id || product.id,
+  }));
 }

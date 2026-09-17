@@ -261,6 +261,7 @@ import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
 import Toast from '../components/Toast';
 import BookingButton from '../components/BookingButton';
+import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { getProductById, getRelatedProducts } from '../services/productService';
 import './ProductDetails.css';
@@ -270,9 +271,10 @@ function ProductDetails() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
+  const { wishlistProductIds, toggleWishlist } = useWishlist();
   const [quantity, setQuantity] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     async function loadProduct() {
@@ -308,13 +310,37 @@ function ProductDetails() {
   }
 
   const related = getRelatedProducts(product);
+  const productId = Number(product?.id || product?.product_id || product?._id);
+  const storeId = Number(product?.store_id || product?.storeId) || null;
 
   const decrease = () => setQuantity(q => (q > 1 ? q - 1 : 1));
   const increase = () => setQuantity(q => (q < product.stock ? q + 1 : q));
 
-  const handleAddToCart = () => {
-    addToCart(product, quantity);
-    setShowToast(true);
+  const handleAddToCart = async () => {
+    try {
+      await addToCart(product, quantity);
+      setShowToast(true);
+    } catch (error) {
+      console.error('Unable to add product to cart:', error);
+    }
+  };
+
+  const handleWishlistToggle = async () => {
+    try {
+      if (!localStorage.getItem('token')) {
+        setToastMessage('Please login to use wishlist');
+        setShowToast(true);
+        return;
+      }
+      const saved = wishlistProductIds.includes(Number(product.id));
+      await toggleWishlist(productId);
+      setToastMessage(saved ? 'Removed from wishlist' : 'Added to wishlist');
+      setShowToast(true);
+    } catch (error) {
+      console.error('Unable to update wishlist:', error);
+      setToastMessage(error.response?.data?.message || 'Wishlist action failed');
+      setShowToast(true);
+    }
   };
 
   return (
@@ -370,16 +396,18 @@ function ProductDetails() {
                 <BookingButton
                   storeName={product.store}
                   productName={product.name}
+                    productId={productId}
+                    storeId={storeId}
                   className="details-reserve-btn"
                 />
               )}
 
               <button
-                className={`wish-btn ${isWishlisted ? 'active' : ''}`}
-                onClick={() => setIsWishlisted(!isWishlisted)}
+                className={`wish-btn ${wishlistProductIds.includes(Number(product.id)) ? 'active' : ''}`}
+                onClick={handleWishlistToggle}
                 aria-label="Toggle wishlist"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={isWishlisted ? '#11120f' : 'none'} stroke="currentColor" strokeWidth="2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={wishlistProductIds.includes(Number(product.id)) ? '#11120f' : 'none'} stroke="currentColor" strokeWidth="2">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                 </svg>
               </button>
@@ -408,7 +436,7 @@ function ProductDetails() {
 
       <Toast
         show={showToast}
-        message={`Added ${quantity} x ${product.name} to cart`}
+        message={toastMessage || `Added ${quantity} x ${product.name} to cart`}
         onHide={() => setShowToast(false)}
       />
     </div>

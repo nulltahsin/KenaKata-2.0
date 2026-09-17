@@ -25,18 +25,40 @@
 
 // export default BookingButton;
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import './BookingButton.css';
 
-function BookingButton({ storeName, productName, label = 'Reserve', className = '' }) {
+function BookingButton({ storeName, productName, productId, storeId, label = 'Reserve', className = '', onSuccess }) {
   const navigate = useNavigate();
 
-  const handleClick = (e) => {
+  const handleClick = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const params = new URLSearchParams({ new: '1' });
-    if (storeName) params.set('store', storeName);
-    if (productName) params.set('product', productName);
-    navigate(`/reservations?${params.toString()}`);
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const resolvedProductId = Number(productId) || null;
+      const resolvedStoreId = Number(storeId) || null;
+      await api.post('/api/reservations', {
+        product_id: resolvedProductId,
+        productId: resolvedProductId,
+        store_id: resolvedStoreId,
+        storeId: resolvedStoreId,
+        deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      });
+
+      sessionStorage.setItem('reservation_toast', 'Reserved successfully!');
+      onSuccess?.();
+      navigate('/reservations');
+    } catch (error) {
+      console.error('Reservation failed:', error);
+      onSuccess?.(error?.response?.data?.message || 'Unable to create reservation.');
+    }
   };
 
   return (

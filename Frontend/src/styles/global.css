@@ -2,6 +2,12 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  caret-color: transparent !important;
+}
+
+*::before,
+*::after {
+  caret-color: transparent !important;
 }
 
 html {
@@ -23,12 +29,40 @@ body {
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
 }
 
+input,
+textarea {
+  caret-color: auto !important;
+  cursor: text !important;
+}
+
+body,
+#root,
+div,
+section,
+h1,
+h2,
+h3,
+h4,
+p,
+span {
+  cursor: default !important;
+  user-select: auto;
+}
+
 button {
-  cursor: pointer;
+  cursor: pointer !important;
+}
+
+a,
+select,
+[role="button"] {
+  cursor: pointer !important;
 }
 
 a {

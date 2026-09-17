@@ -11,6 +11,11 @@
 
 .cart-header {
   margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 .cart-header h1 {
@@ -24,6 +29,26 @@
   font-size: 15px;
   color: #555750;
   margin: 0;
+}
+
+.header-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 18px;
+  background: #ffffff;
+  border: 1px solid #d8d9d1;
+  color: #11120f;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.header-secondary-btn:hover {
+  border-color: #11120f;
 }
 
 .cart-empty {

@@ -400,6 +400,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
 import { getProducts } from '../services/productService';
+import { getStores } from '../services/storeService';
 import './Products.css';
 
 function Products() {
@@ -411,12 +412,14 @@ function Products() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('default');
+  const [stores, setStores] = useState([]);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const data = await getProducts();
-        setProducts(data);
+        const [productList, storeList] = await Promise.all([getProducts(), getStores()]);
+        setProducts(productList);
+        setStores(storeList);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -447,7 +450,7 @@ function Products() {
         product.category === selectedCategory;
 
       const matchesStore =
-        !storeFilter || product.store === storeFilter;
+        !storeFilter || Number(product.store_id) === Number(storeFilter);
 
       return matchesSearch && matchesCategory && matchesStore;
     })
@@ -470,7 +473,9 @@ function Products() {
       <div className="products-container">
         <div className="products-header">
           <h1>
-            {storeFilter ? `Products from ${storeFilter}` : 'All Products'}
+            {storeFilter
+              ? `Products from ${stores.find((store) => Number(store.store_id) === Number(storeFilter))?.store_name || storeFilter}`
+              : 'All Products'}
           </h1>
 
           <p>

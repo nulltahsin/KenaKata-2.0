@@ -128,12 +128,20 @@
   font-weight: 700;
   line-height: 0.98;
   letter-spacing: -5px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  cursor: default;
 }
 
 .hero-title span {
   display: block;
   color: #85877f;
   margin-top: 8px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  cursor: default;
 }
 
 .hero-description {

@@ -1,6 +1,4 @@
 import { Link } from 'react-router-dom';
-import BookingButton from './BookingButton';
-
 import './StoreCard.css';
 
 
@@ -51,24 +49,6 @@ function StoreCard({ store }) {
 
         </div>
 
-
-
-        <div className="store-card-footer">
-
-
-          <span className="store-cta">
-
-            View Products →
-
-          </span>
-
-
-          <BookingButton
-            storeName={store.store_name}
-          />
-
-
-        </div>
 
 
       </div>

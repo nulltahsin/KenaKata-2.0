@@ -30,18 +30,20 @@ export function CartProvider({ children }) {
 
     try {
       const response = await api.get('/api/cart');
-      setItems(response.data.map((item) => ({
+      const mapped = response.data.map((item) => ({
         id: item.product_id,
         product_id: item.product_id,
         hold_id: item.hold_id,
         name: item.name,
         store: item.store,
-        price: item.price,
+        price: Number(item.price),
         image: item.image,
-        quantity: item.quantity,
+        quantity: Number(item.quantity),
         expires_at: item.expires_at,
-      })));
-      localStorage.setItem(getCartStorageKey(user), JSON.stringify(response.data));
+      }));
+
+      setItems(mapped);
+      localStorage.setItem(getCartStorageKey(user), JSON.stringify(mapped));
     } catch (error) {
       console.error('Failed to load cart from backend', error);
       setItems(readCartFromStorage(user));
@@ -53,13 +55,20 @@ export function CartProvider({ children }) {
   }, [user?.id]);
 
   const addToCart = async (product, quantity = 1) => {
+    const productStock = Number(product.stock ?? product.stock_qty ?? 0);
+    const currentQty = items.find((item) => item.id === product.id)?.quantity || 0;
+
+    if (productStock <= 0 || currentQty + quantity > productStock) {
+      throw new Error('Not enough stock available');
+    }
+
     if (!user?.id) {
       const next = [...readCartFromStorage(user)];
       const found = next.find((item) => item.id === product.id);
       if (found) {
-        found.quantity += quantity;
+        found.quantity = Math.min(productStock, found.quantity + quantity);
       } else {
-        next.push({ id: product.id, name: product.name, store: product.store, price: product.price, image: product.image, quantity });
+        next.push({ id: product.id, name: product.name, store: product.store, price: product.price, image: product.image, quantity: Math.min(quantity, productStock) });
       }
       localStorage.setItem(getCartStorageKey(user), JSON.stringify(next));
       setItems(next);

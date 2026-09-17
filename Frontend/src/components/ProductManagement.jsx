@@ -16,7 +16,9 @@ function ProductManagement({ store, products, onProductsChange }) {
     setError('');
   };
   const cancelEdit = () => { setEditingId(null); setForm(emptyProduct); };
-  const shopCategories = (store.category || '').split(',').map((category) => category.trim()).filter(Boolean);
+  const shopCategories = [...new Set((Array.isArray(store.categories) ? store.categories : (store.category || '').split(','))
+    .map((category) => category.trim())
+    .filter(Boolean))];
   const handleCategoryChange = (event) => setForm({ ...form, category_names: [...event.target.selectedOptions].map((option) => option.value) });
 
   async function handleSubmit(event) {
@@ -26,7 +28,8 @@ function ProductManagement({ store, products, onProductsChange }) {
     const payload = { ...form, store_id: store.store_id, category_names: form.category_names, price: Number(form.price), stock_qty: Number(form.stock_qty) };
     try {
       const saved = editingId ? await updateProduct(editingId, payload) : await createProduct(payload);
-      const next = editingId ? products.map((product) => product.id === editingId ? { ...product, ...saved, id: saved.product_id || saved.id } : product) : [...products, { ...saved, id: saved.product_id || saved.id }];
+      const savedProduct = { ...saved, id: saved.product_id || saved.id, category_names: saved.category_names || form.category_names };
+      const next = editingId ? products.map((product) => product.id === editingId ? { ...product, ...savedProduct } : product) : [...products, savedProduct];
       onProductsChange(next);
       cancelEdit();
     } catch (requestError) {

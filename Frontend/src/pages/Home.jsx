@@ -1,22 +1,54 @@
+import { useEffect, useState } from "react";
 import "./Home.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-
-const featuredMarket = {
-  name: "Urban Collection",
-  location: "Dhaka, Bangladesh",
-  distance: "2.4 km",
-  stores: 12,
-  products: 240
-};
-
-const platformStats = {
-  stores: "500+",
-  products: "10K+",
-  markets: "20+"
-};
+import api from "../services/api";
 
 function Home() {
+  const [productList, setProductList] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [marketList, setMarketList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadHomeData() {
+      try {
+        const [categoryResponse, marketResponse, productResponse] = await Promise.all([
+          api.get("/api/categories"),
+          api.get("/api/markets"),
+          api.get("/api/products")
+        ]);
+
+        const categoryList = Array.isArray(categoryResponse.data) ? categoryResponse.data : [];
+        const markets = Array.isArray(marketResponse.data) ? marketResponse.data : [];
+        const products = Array.isArray(productResponse.data) ? productResponse.data : [];
+
+        setCategories(categoryList);
+        setMarketList(markets);
+        setProductList(products);
+      } catch (error) {
+        console.error("Error loading home data:", error);
+        setCategories([]);
+        setMarketList([]);
+        setProductList([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadHomeData();
+  }, []);
+
+  const featuredMarket = {
+    name: marketList[0]?.market_name || "Bashundhara City",
+    location: marketList[0]?.location || "Dhaka, Bangladesh",
+    distance: "2.4 km",
+    stores: Math.max(1, marketList[0]?.store_count || marketList.length),
+    products: productList.length,
+  };
+
+  const visibleCategories = categories.slice(0, 4);
+
   return (
     <div className="home-page">
       <Navbar />
@@ -24,9 +56,7 @@ function Home() {
       <main>
         <section className="hero-section">
           <div className="hero-content">
-            <p className="hero-eyebrow">
-              YOUR LOCAL MARKETPLACE
-            </p>
+            <p className="hero-eyebrow">YOUR LOCAL MARKETPLACE</p>
 
             <h1 className="hero-title">
               Everything you
@@ -36,8 +66,7 @@ function Home() {
             </h1>
 
             <p className="hero-description">
-              Discover products, local stores and markets around your area —
-              all in one beautifully simple marketplace.
+              Discover products, local stores and markets around your area — all in one beautifully simple marketplace.
             </p>
 
             <div className="hero-buttons">
@@ -63,17 +92,9 @@ function Home() {
 
             <div className="market-details">
               <div className="market-main-info">
-                <p className="market-label">
-                  FEATURED MARKET
-                </p>
-
-                <h2 className="market-name">
-                  {featuredMarket.name}
-                </h2>
-
-                <p className="market-location">
-                  {featuredMarket.location}
-                </p>
+                <p className="market-label">FEATURED MARKET</p>
+                <h2 className="market-name">{featuredMarket.name}</h2>
+                <p className="market-location">{featuredMarket.location}</p>
               </div>
 
               <div className="market-meta">
@@ -94,17 +115,17 @@ function Home() {
         <section className="stats-section">
           <div className="stats-grid">
             <div className="stat-card">
-              <strong>{platformStats.stores}</strong>
+              <strong>{loading ? "..." : `${marketList.length}+`}</strong>
               <span>Local Stores</span>
             </div>
 
             <div className="stat-card">
-              <strong>{platformStats.products}</strong>
+              <strong>{loading ? "..." : `${productList.length}+`}</strong>
               <span>Products</span>
             </div>
 
             <div className="stat-card">
-              <strong>{platformStats.markets}</strong>
+              <strong>{loading ? "..." : `${marketList.length}+`}</strong>
               <span>Markets</span>
             </div>
 
@@ -118,77 +139,36 @@ function Home() {
         <section className="categories-section">
           <div className="section-heading">
             <div>
-              <p className="section-eyebrow">
-                EXPLORE
-              </p>
-
-              <h2>
-                Shop by category
-              </h2>
+              <p className="section-eyebrow">EXPLORE</p>
+              <h2>Shop by category</h2>
             </div>
 
-            <a href="/products" className="view-all">
-              View all ↗
-            </a>
+            <a href="/products" className="view-all">View all ↗</a>
           </div>
 
           <div className="category-grid">
-            <a href="/products?category=grocery" className="category-card">
-              <div className="category-icon grocery-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                  <line x1="3" y1="6" x2="21" y2="6"></line>
-                  <path d="M16 10a4 4 0 0 1-8 0"></path>
-                </svg>
-              </div>
+            {visibleCategories.length > 0 ? (
+              visibleCategories.map((category) => (
+                <a key={category.category_id} href={`/products?category=${encodeURIComponent(category.category_name)}`} className="category-card">
+                  <div className="category-icon grocery-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                      <line x1="3" y1="6" x2="21" y2="6"></line>
+                      <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg>
+                  </div>
 
-              <div>
-                <h3>Fresh Grocery</h3>
-                <p>120+ stores</p>
+                  <div>
+                    <h3>{category.category_name}</h3>
+                    <p>{countProductsByCategory(category.category_name)} items</p>
+                  </div>
+                </a>
+              ))
+            ) : (
+              <div className="category-card empty-category-card">
+                <p>No categories yet.</p>
               </div>
-            </a>
-
-            <a href="/products?category=fashion" className="category-card">
-              <div className="category-icon fashion-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path>
-                </svg>
-              </div>
-
-              <div>
-                <h3>Fashion</h3>
-                <p>80+ stores</p>
-              </div>
-            </a>
-
-            <a href="/products?category=electronics" className="category-card">
-              <div className="category-icon electronics-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                  <line x1="8" y1="21" x2="16" y2="21"></line>
-                  <line x1="12" y1="17" x2="12" y2="21"></line>
-                </svg>
-              </div>
-
-              <div>
-                <h3>Electronics</h3>
-                <p>60+ stores</p>
-              </div>
-            </a>
-
-            <a href="/products?category=home" className="category-card">
-              <div className="category-icon home-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                </svg>
-              </div>
-
-              <div>
-                <h3>Home & Living</h3>
-                <p>90+ stores</p>
-              </div>
-            </a>
+            )}
           </div>
         </section>
       </main>
@@ -196,6 +176,13 @@ function Home() {
       <Footer />
     </div>
   );
+
+  function countProductsByCategory(name) {
+    return productList.filter((product) => {
+      const productCategory = product.category_name || product.category || "";
+      return productCategory.toLowerCase() === name.toLowerCase();
+    }).length;
+  }
 }
 
 export default Home;

@@ -121,7 +121,7 @@ checkRole("CUSTOMER"),
 
 });
 
-router.get("/vendor/me", verifyToken, checkRole("VENDOR"), async (req, res) => {
+router.get(["/vendor", "/vendor/me"], verifyToken, checkRole("VENDOR"), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT o.order_id, o.total_amount, o.status, o.customer_id,

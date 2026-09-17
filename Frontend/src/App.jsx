@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { WishlistProvider } from "./context/WishlistContext";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -27,7 +28,8 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <BrowserRouter>
+        <WishlistProvider>
+          <BrowserRouter>
 
           <Routes>
 
@@ -168,7 +170,8 @@ function App() {
 
           </Routes>
 
-        </BrowserRouter>
+          </BrowserRouter>
+        </WishlistProvider>
       </CartProvider>
     </AuthProvider>
   );

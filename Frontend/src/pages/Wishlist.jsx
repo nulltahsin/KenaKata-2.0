@@ -85,48 +85,49 @@
 
 // export default Wishlist;
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Toast from '../components/Toast';
 import { useCart } from '../context/CartContext';
-import { getWishlistProducts } from '../services/productService';
+import { useWishlist } from '../context/WishlistContext';
 import './Wishlist.css';
 
 function Wishlist() {
   const { addToCart } = useCart();
-  const [items, setItems] = useState([]); // শুরুতেই খালি অ্যারে
-  const [loading, setLoading] = useState(true); // লোডিং স্টেট
+  const { items, loading, removeWishlistItem } = useWishlist();
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
-  // এখানে useEffect বসানো হয়েছে ডেটা লোড করার জন্য
-  useEffect(() => {
-    async function loadWishlist() {
-      try {
-        const data = await getWishlistProducts();
-        setItems(data);
-      } catch (error) {
-        console.error("Error loading wishlist:", error);
-      } finally {
-        setLoading(false);
-      }
+  const removeItem = async (item) => {
+    const productId = item.product_id || item.id;
+    try {
+      await removeWishlistItem(productId);
+      setToastMsg('Removed from wishlist');
+      setShowToast(true);
+    } catch (error) {
+      console.error('Error removing wishlist item:', error);
+      setToastMsg(error.response?.data?.message || 'Unable to remove item');
+      setShowToast(true);
     }
-    loadWishlist();
-  }, []);
-
-  const removeItem = (id) => {
-    const item = items.find(p => p.id === id);
-    setItems(prev => prev.filter(p => p.id !== id));
-    setToastMsg(`${item.name} removed from wishlist`);
-    setShowToast(true);
   };
 
-  const moveToCart = (product) => {
-    addToCart(product);
-    setToastMsg(`${product.name} added to cart`);
-    setShowToast(true);
+  const moveToCart = async (product) => {
+    try {
+      await addToCart({
+        ...product,
+        id: product.id || product.product_id,
+        product_id: product.product_id || product.id,
+        stock: product.stock ?? product.stock_qty,
+        image: product.image || product.image_url,
+      }, 1);
+      setToastMsg(`${product.name} added to cart`);
+      setShowToast(true);
+    } catch (error) {
+      setToastMsg(error?.response?.data?.message || 'Unable to add item to cart');
+      setShowToast(true);
+    }
   };
 
   if (loading) return <div className="loading">Loading wishlist...</div>;
@@ -152,15 +153,15 @@ function Wishlist() {
           </div>
         ) : (
           <div className="wishlist-grid">
-            {items.map(p => (
-              <div key={p.id} className="wishlist-card">
-                <Link to={`/products/${p.id}`} className="wishlist-card-image">
-                  <img src={p.image} alt={p.name} />
+            {items.map((p) => (
+              <div key={p.product_id || p.id} className="wishlist-card">
+                <Link to={`/products/${p.product_id || p.id}`} className="wishlist-card-image">
+                  <img src={p.image || p.image_url} alt={p.name} />
                 </Link>
                 <div className="wishlist-card-body">
-                  <span className="wishlist-category">{p.category}</span>
+                  <span className="wishlist-category">{p.category || 'General'}</span>
                   <h3>
-                    <Link to={`/products/${p.id}`}>{p.name}</Link>
+                    <Link to={`/products/${p.product_id || p.id}`}>{p.name}</Link>
                   </h3>
                   <p className="wishlist-store">{p.store}</p>
                   <div className="wishlist-card-footer">
@@ -169,7 +170,7 @@ function Wishlist() {
                       <button className="wishlist-move-btn" onClick={() => moveToCart(p)}>
                         Add to Cart
                       </button>
-                      <button className="wishlist-remove-btn" onClick={() => removeItem(p.id)}>
+                      <button className="wishlist-remove-btn" onClick={() => removeItem(p)}>
                         Remove
                       </button>
                     </div>

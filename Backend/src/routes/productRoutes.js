@@ -550,19 +550,36 @@ router.get("/", async (req, res) => {
     let result;
     if (store_id) {
       result = await pool.query(
-        `SELECT p.*, c.category_name, s.store_name
+        `SELECT p.*, p.product_id AS id, p.product_id AS product_id,
+          p.stock_qty AS stock, c.category_name, s.store_name
          FROM products p
          LEFT JOIN categories c ON p.category_id = c.category_id
          LEFT JOIN stores s ON p.store_id = s.store_id
-         WHERE p.store_id = $1 ORDER BY p.product_id`,
+         LEFT JOIN (
+           SELECT product_id, COALESCE(SUM(quantity), 0) AS held_quantity
+           FROM product_holds
+           WHERE status = 'active' AND expires_at > NOW()
+           GROUP BY product_id
+         ) h ON h.product_id = p.product_id
+         WHERE p.store_id = $1
+           AND p.stock_qty - COALESCE(h.held_quantity, 0) > 0
+         ORDER BY p.product_id`,
         [store_id]
       );
     } else {
       result = await pool.query(
-        `SELECT p.*, c.category_name, s.store_name
+        `SELECT p.*, p.product_id AS id, p.product_id AS product_id,
+          p.stock_qty AS stock, c.category_name, s.store_name
          FROM products p
          LEFT JOIN categories c ON p.category_id = c.category_id
          LEFT JOIN stores s ON p.store_id = s.store_id
+         LEFT JOIN (
+           SELECT product_id, COALESCE(SUM(quantity), 0) AS held_quantity
+           FROM product_holds
+           WHERE status = 'active' AND expires_at > NOW()
+           GROUP BY product_id
+         ) h ON h.product_id = p.product_id
+         WHERE p.stock_qty - COALESCE(h.held_quantity, 0) > 0
          ORDER BY p.product_id`
       );
     }

@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const pool = require("./src/config/db");
 
 const app = express();
 
@@ -38,12 +39,23 @@ app.use("/api/orders", require("./src/routes/orderRoutes"));
 app.use("/api/order-items", require("./src/routes/orderItemRoutes"));
 app.use("/api/reservations", require("./src/routes/reservationRoutes"));
 app.use("/api/wishlist", require("./src/routes/wishlistRoutes"));
+app.use("/api/cart", require("./src/routes/cartRoutes"));
 app.use("/api/payments", require("./src/routes/paymentRoutes"));
 app.use("/api/reviews", require("./src/routes/reviewRoutes"));
 app.use("/api/products", require("./src/routes/productRoutes"));
 app.use("/api/auth", require("./src/routes/authRoutes"));
-app.use("/api/admin", require("./src//routes/adminRoutes"));
+app.use("/api/admin", require("./src/routes/adminRoutes"));
 
-app.listen(PORT, () => {
-  console.log(`KenaKata backend running on http://localhost:${PORT}`);
-});
+async function startServer() {
+  try {
+    await pool.initializeCustomerTables();
+    app.listen(PORT, () => {
+      console.log(`KenaKata backend running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Database initialization failed:", error);
+    process.exitCode = 1;
+  }
+}
+
+startServer();

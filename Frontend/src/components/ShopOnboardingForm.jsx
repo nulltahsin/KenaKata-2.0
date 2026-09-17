@@ -15,7 +15,8 @@ function ShopOnboardingForm({ store, markets, onSaved, onCancel }) {
     setSaving(true);
     setError('');
     try {
-      const payload = { ...form, market_id: Number(form.market_id) };
+      const categories = [...new Set(form.category.split(',').map((tag) => tag.trim()).filter(Boolean))];
+      const payload = { ...form, category: categories.join(', '), categories, market_id: Number(form.market_id) };
       const saved = store ? await updateVendorStore(store.store_id, payload) : await createVendorStore(payload);
       onSaved(saved);
     } catch (requestError) {

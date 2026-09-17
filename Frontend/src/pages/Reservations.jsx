@@ -803,14 +803,23 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import Toast from '../components/Toast';
+import api from '../services/api';
 import { getReservations } from '../services/reservationService'; // সঠিক ইমপোর্ট
 import './Reservations.css';
 
 function Reservations() {
   const [reservations, setReservations] = useState([]); // এখানে ডেটা সেভ হবে
   const [loading, setLoading] = useState(true);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
+    const pendingToast = sessionStorage.getItem('reservation_toast');
+    if (pendingToast) {
+      setToastMessage(pendingToast);
+      sessionStorage.removeItem('reservation_toast');
+    }
+
     async function loadReservations() {
       try {
         const data = await getReservations(); // এপিআই কল
@@ -824,28 +833,64 @@ function Reservations() {
     loadReservations();
   }, []);
 
+  const cancelReservation = async (reservationId) => {
+    try {
+      await api.delete(`/api/reservations/${reservationId}`);
+      setReservations((current) => current.filter((reservation) => reservation.id !== reservationId));
+      setToastMessage('Reservation cancelled.');
+    } catch (error) {
+      setToastMessage(error.response?.data?.message || 'Unable to cancel reservation.');
+    }
+  };
+
   if (loading) return <div>Loading reservations...</div>;
 
   return (
     <div className="reservations-page">
       <Navbar />
       <div className="reservations-container">
-        <h1>My Reservations</h1>
+        <header className="reservations-header">
+          <div>
+            <p className="reservations-eyebrow">YOUR BOOKINGS</p>
+            <h1>My Reservations</h1>
+            <p>Keep track of products and store visits you have reserved.</p>
+          </div>
+          <span className="reservations-count">{reservations.length} {reservations.length === 1 ? 'reservation' : 'reservations'}</span>
+        </header>
         {reservations.length === 0 ? (
-          <p>No reservations found.</p>
+          <div className="reservations-empty">
+            <div className="empty-icon">◷</div>
+            <h3>No reservations yet</h3>
+            <p>Reserve a product or store and it will appear here.</p>
+          </div>
         ) : (
           <div className="reservations-list">
             {reservations.map(res => (
               <div key={res.id} className="reservation-card">
-                <h3>{res.product}</h3>
-                <p>Status: {res.status}</p>
-                <p>Date: {res.date}</p>
+                <div className="reservation-image-wrap">
+                  {res.image ? <img src={res.image} alt={res.product} className="reservation-image" /> : <div className="reservation-image-fallback">K</div>}
+                </div>
+                <div className="reservation-card-content">
+                  <div className="reservation-card-topline">
+                    <span className="reservation-label">RESERVATION #{res.id}</span>
+                    <span className={`reservation-status ${String(res.status).toLowerCase()}`}>{String(res.status).toUpperCase()}</span>
+                  </div>
+                  <h3>{res.product !== 'Product' ? res.product : res.store}</h3>
+                  {res.price !== null && <p className="reservation-price">৳{res.price}</p>}
+                  <div className="reservation-details">
+                    <span><strong>Store</strong>{res.store}</span>
+                    {res.location && <span><strong>Location</strong>{res.location}</span>}
+                    <span><strong>Reserved</strong>{new Date(res.date).toLocaleString()}</span>
+                  </div>
+                  <button type="button" className="reservation-cancel" onClick={() => cancelReservation(res.id)}>Cancel reservation</button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
       <Footer />
+      <Toast show={Boolean(toastMessage)} message={toastMessage} onHide={() => setToastMessage('')} />
     </div>
   );
 }

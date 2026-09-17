@@ -19,7 +19,12 @@ checkRole("VENDOR"),
 
   try {
 
-    const { market_id, store_name, address, description, logo_url, category } = req.body;
+    const { market_id, store_name, address, description, logo_url, category, categories } = req.body;
+    const categoryTags = [...new Set(
+      (Array.isArray(categories) ? categories : String(category || '').split(','))
+        .map((tag) => String(tag).trim())
+        .filter(Boolean)
+    )];
 
     const vendor_id = req.user.user_id;  //logged in vendor er id, onno vendor er jonno store create korte parbe na
 
@@ -51,7 +56,7 @@ checkRole("VENDOR"),
 
       `,
 
-      [vendor_id, market_id, store_name, address, description, logo_url, category]
+      [vendor_id, market_id, store_name, address, description, logo_url, categoryTags.join(', ')]
 
     );
 
@@ -198,7 +203,12 @@ checkRole("VENDOR"),
 
     const store_id = req.params.id;
 
-    const { store_name, address, description, logo_url, category, market_id } = req.body;
+    const { store_name, address, description, logo_url, category, categories, market_id } = req.body;
+    const categoryTags = [...new Set(
+      (Array.isArray(categories) ? categories : String(category || '').split(','))
+        .map((tag) => String(tag).trim())
+        .filter(Boolean)
+    )];
 
     const vendor_id = req.user.user_id;  //logged in vendor er id
 
@@ -241,7 +251,7 @@ checkRole("VENDOR"),
 
         logo_url,
 
-        category,
+        categoryTags.join(', '),
 
         market_id,
 
