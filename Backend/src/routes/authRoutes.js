@@ -1,23 +1,26 @@
 const express = require("express");
 const router = express.Router();
+
 const pool = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-
 const verifyToken = require("../middleware/authMiddleware");
-const checkRole = require("../middleware/roleMiddleware");
 const { revokeToken } = require("../middleware/tokenBlacklist");
 
 
-//register a user
 
-router.post("/register", async(req,res)=>{
+// ================= REGISTER =================
+
+router.post("/register", async (req,res)=>{
+
     const client = await pool.connect();
 
     try{
 
+
         const {
+
             name,
             email,
             phone,
@@ -25,66 +28,110 @@ router.post("/register", async(req,res)=>{
             role,
             delivery_address,
             business_name
+
         } = req.body;
 
-        const normalizedEmail = String(email || "").trim().toLowerCase();
 
 
-        // validation
+        const normalizedEmail =
+            String(email || "").trim().toLowerCase();
+
+
 
         if(!name || !normalizedEmail || !password || !role){
 
             return res.status(400).json({
+
                 message:"Required fields missing"
+
             });
 
         }
 
-        if(role!=="CUSTOMER"  && role!=="VENDOR"){
+
+
+        if(role !== "CUSTOMER" && role !== "VENDOR"){
+
             return res.status(400).json({
-                message : "INVALID ROLE"
+
+                message:"Invalid role"
+
             });
-            }
+
+        }
+
+
 
         if(password.length < 6){
-            return res.status(400).json({ message:"Password must be at least 6 characters" });
+
+            return res.status(400).json({
+
+                message:"Password must be at least 6 characters"
+
+            });
+
         }
 
-        if(role === "VENDOR" && !String(business_name || "").trim()){
-            return res.status(400).json({ message:"Business name is required for vendors" });
+
+
+        if(role === "VENDOR" && !business_name){
+
+            return res.status(400).json({
+
+                message:"Business name is required for vendor"
+
+            });
+
         }
 
 
-           await client.query("BEGIN");
 
-        // check existing user
+
+
+        await client.query("BEGIN");
+
+
+
 
         const existingUser = await client.query(
+
             `
-            SELECT *
+            SELECT user_id
             FROM users
             WHERE email=$1
             `,
+
             [normalizedEmail]
+
         );
+
 
 
         if(existingUser.rows.length > 0){
 
+            await client.query("ROLLBACK");
+
             return res.status(409).json({
+
                 message:"Email already exists"
+
             });
 
         }
 
-        //now hashing pass
-
-        const password_hash = await bcrypt.hash(password,10);
 
 
-        //inserting user now
 
-        const Userresult = await client.query(
+
+        const password_hash =
+            await bcrypt.hash(password,10);
+
+
+
+
+
+        const userResult = await client.query(
+
             `
             INSERT INTO users
             (
@@ -97,42 +144,73 @@ router.post("/register", async(req,res)=>{
 
             VALUES($1,$2,$3,$4,$5)
 
-            RETURNING user_id,name,email,role
-
+            RETURNING
+                user_id,
+                name,
+                email,
+                phone,
+                role
             `,
+
             [
+
                 name,
                 normalizedEmail,
-                phone,
+                phone || null,
                 password_hash,
                 role
+
             ]
+
         );
 
-        const user_id = Userresult.rows[0].user_id;
 
-        if(role==="CUSTOMER"){
+
+
+
+        const user_id =
+            userResult.rows[0].user_id;
+
+
+
+
+
+        if(role === "CUSTOMER"){
 
 
             await client.query(
+
                 `
                 INSERT INTO customers
                 (
-                user_id,
-                delivery_address
+                    user_id,
+                    delivery_address
                 )
-                VALUES ( $1,$2)
-                
+
+                VALUES($1,$2)
+
                 `,
-                [user_id , delivery_address]
+
+                [
+
+                    user_id,
+                    delivery_address || null
+
+                ]
+
             );
+
         }
+
+
+
 
 
         if(role === "VENDOR"){
 
 
             await client.query(
+
                 `
                 INSERT INTO vendors
                 (
@@ -143,29 +221,54 @@ router.post("/register", async(req,res)=>{
                 VALUES($1,$2)
 
                 `,
+
                 [
+
                     user_id,
                     business_name
-                ]
-            );
 
+                ]
+
+            );
 
         }
 
-         await client.query("COMMIT");
 
-                    const token = jwt.sign(
-                        { user_id, role },
-                        process.env.JWT_SECRET,
-                        { expiresIn: "1d" }
-                    );
 
-          res.status(201).json({
+
+
+        await client.query("COMMIT");
+
+
+
+
+
+        const token = jwt.sign(
+
+            {
+                user_id,
+                role
+            },
+
+            process.env.JWT_SECRET,
+
+            {
+                expiresIn:"1d"
+            }
+
+        );
+
+
+
+
+
+        res.status(201).json({
 
             message:"Registration successful",
+
             token,
 
-            user:Userresult.rows[0]
+            user:userResult.rows[0]
 
         });
 
@@ -179,6 +282,7 @@ router.post("/register", async(req,res)=>{
 
         console.error(error);
 
+
         res.status(500).json({
 
             message:error.message
@@ -187,15 +291,22 @@ router.post("/register", async(req,res)=>{
 
     }
 
+
     finally{
+
         client.release();
+
     }
 
 });
 
 
 
-//login
+
+
+
+
+// ================= LOGIN =================
 
 
 router.post("/login", async(req,res)=>{
@@ -203,8 +314,21 @@ router.post("/login", async(req,res)=>{
 
     try{
 
-        const {  email, password } = req.body;
-        const normalizedEmail = String(email || "").trim().toLowerCase();
+
+        const {
+
+            email,
+            password
+
+        } = req.body;
+
+
+
+
+        const normalizedEmail =
+            String(email || "").trim().toLowerCase();
+
+
 
 
         if(!normalizedEmail || !password){
@@ -217,23 +341,42 @@ router.post("/login", async(req,res)=>{
 
         }
 
-        // find user
+
+
+
+
 
         const result = await pool.query(
 
             `
-            SELECT *
+            SELECT
+                user_id,
+                name,
+                email,
+                phone,
+                password_hash,
+                role
+
             FROM users
+
             WHERE email=$1
+
             `,
 
-            [normalizedEmail]
+            [
+
+                normalizedEmail
+
+            ]
 
         );
 
 
 
-        if(result.rows.length===0){
+
+
+
+        if(result.rows.length === 0){
 
             return res.status(401).json({
 
@@ -245,10 +388,27 @@ router.post("/login", async(req,res)=>{
 
 
 
-        const user = result.rows[0]; //result contains user , found by the sql query above
 
-//compare entered pass
-        const match = await bcrypt.compare(  password, user.password_hash  );
+
+
+        const user = result.rows[0];
+
+
+
+
+
+
+        const match =
+            await bcrypt.compare(
+
+                password,
+
+                user.password_hash
+
+            );
+
+
+
 
 
         if(!match){
@@ -261,17 +421,34 @@ router.post("/login", async(req,res)=>{
 
         }
 
-        ///creation of token
+
+
+
+
 
         const token = jwt.sign(
 
-            { user_id:user.user_id , role:user.role  },
+            {
+
+                user_id:user.user_id,
+
+                role:user.role
+
+            },
 
             process.env.JWT_SECRET,
 
-            { expiresIn:"1d" }
+            {
+
+                expiresIn:"1d"
+
+            }
 
         );
+
+
+
+
 
 
 
@@ -282,9 +459,17 @@ router.post("/login", async(req,res)=>{
             token,
 
             user:{
+
                 user_id:user.user_id,
+
                 name:user.name,
+
+                email:user.email,
+
+                phone:user.phone,
+
                 role:user.role
+
             }
 
         });
@@ -296,7 +481,9 @@ router.post("/login", async(req,res)=>{
 
     catch(error){
 
+
         console.error(error);
+
 
         res.status(500).json({
 
@@ -309,18 +496,46 @@ router.post("/login", async(req,res)=>{
 
 });
 
-   router.post("/logout",
-    verifyToken,
-        (req,res)=>{
 
-        const token = req.headers.authorization.split(" ")[1];
+
+
+
+
+
+
+
+// ================= LOGOUT =================
+
+
+router.post("/logout",
+
+    verifyToken,
+
+    (req,res)=>{
+
+
+        const token =
+            req.headers.authorization.split(" ")[1];
+
+
+
         revokeToken(token);
 
+
+
         res.json({
-      message:"Logout successful"
 
-      });
+            message:"Logout successful"
 
-});
+        });
+
+
+    }
+
+);
+
+
+
+
 
 module.exports = router;

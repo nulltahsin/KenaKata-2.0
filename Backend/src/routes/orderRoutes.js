@@ -78,44 +78,81 @@ checkRole("CUSTOMER"),
 
 
 router.get("/", 
-
-    verifyToken,
-
+verifyToken,
 checkRole("CUSTOMER"), 
-
-    async (req, res) => {
+async (req,res)=> {
 
   try {
 
-    const customer_id=req.user.user_id;
+    const customer_id = req.user.user_id;
 
-    const result = await pool.query(
-
+    const orders = await pool.query(
       `
-
-      SELECT *
-
-      FROM orders
-
-      WHERE customer_id=$1
-
-      ORDER BY order_id
-
+      SELECT 
+        o.order_id,
+        o.total_amount,
+        o.status,
+        o.payment_id
+      FROM orders o
+      WHERE o.customer_id=$1
+      ORDER BY o.order_id DESC
       `,
-
       [customer_id]
-
     );
 
-    res.json(result.rows);
 
-  }
+    const result = [];
 
-   catch (error) {
+    for (const order of orders.rows) {
+
+      const items = await pool.query(
+        `
+        SELECT
+          oi.product_id,
+          p.name,
+          p.image_url,
+          oi.quantity,
+          oi.price_at_purchase
+        FROM order_items oi
+        JOIN products p
+        ON oi.product_id=p.product_id
+        WHERE oi.order_id=$1
+        `,
+        [order.order_id]
+      );
+
+
+      result.push({
+
+        ...order,
+
+        items: items.rows.map(item=>({
+
+          name:item.name,
+
+          image:item.image_url,
+
+          quantity:item.quantity,
+
+          price:Number(item.price_at_purchase)
+
+        }))
+
+      });
+
+    }
+
+
+    res.json(result);
+
+
+  } catch(error){
 
     console.error(error);
 
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message:error.message
+    });
 
   }
 

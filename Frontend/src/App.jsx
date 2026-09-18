@@ -25,156 +25,179 @@ import VendorDashboard from "./pages/VendorDashboard";
 
 
 function App() {
+
   return (
+
     <AuthProvider>
+
       <CartProvider>
+
         <WishlistProvider>
+
           <BrowserRouter>
 
-          <Routes>
-
-            {/* =========================
-                PUBLIC ROUTES
-            ========================= */}
-
-            <Route
-              path="/"
-              element={<Home />}
-            />
-
-            <Route
-              path="/products"
-              element={<Products />}
-            />
-
-            <Route
-              path="/products/:id"
-              element={<ProductDetails />}
-            />
-
-            <Route
-              path="/markets"
-              element={<Markets />}
-            />
-
-            <Route
-              path="/stores"
-              element={<Stores />}
-            />
-
-            <Route
-              path="/cart"
-              element={
-                <ProtectedRoute roles={['CUSTOMER']}>
-                  <Cart />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/login"
-              element={<Login />}
-            />
-
-            <Route
-              path="/register"
-              element={<Register />}
-            />
+            <Routes>
 
 
-            {/* =========================
-                CUSTOMER PROTECTED ROUTES
-            ========================= */}
+              {/* PUBLIC ROUTES */}
 
-            <Route
-              path="/checkout"
-              element={
-                <ProtectedRoute>
-                  <Checkout />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/orders"
-              element={
-                <ProtectedRoute>
-                  <Orders />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/reservations"
-              element={
-                <ProtectedRoute>
-                  <Reservations />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/wishlist"
-              element={
-                <ProtectedRoute roles={['CUSTOMER']}>
-                  <Wishlist />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/"
+                element={<Home />}
+              />
 
 
-            {/* =========================
-                SELLER ROUTE
-            ========================= */}
-
-            <Route
-              path="/seller/dashboard"
-              element={
-                <ProtectedRoute roles={["VENDOR"]}>
-                  <VendorDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/products"
+                element={<Products />}
+              />
 
 
-            {/* =========================
-                ADMIN ROUTE
-            ========================= */}
+              <Route
+                path="/products/:id"
+                element={<ProductDetails />}
+              />
 
-            <Route
-              path="/admin/dashboard"
-              element={
-                <ProtectedRoute roles={["ADMIN"]}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
 
-            <Route
-              path="/add-product"
-              element={
-                <ProtectedRoute roles={["VENDOR"]}>
-                  <AddProduct />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/markets"
+                element={<Markets />}
+              />
 
-          </Routes>
+
+              <Route
+                path="/stores"
+                element={<Stores />}
+              />
+
+
+              <Route
+                path="/login"
+                element={<Login />}
+              />
+
+
+              <Route
+                path="/register"
+                element={<Register />}
+              />
+
+
+
+              {/* CUSTOMER ROUTES */}
+
+
+              <Route
+                path="/cart"
+                element={
+                  <ProtectedRoute roles={["CUSTOMER"]}>
+                    <Cart />
+                  </ProtectedRoute>
+                }
+              />
+
+
+              <Route
+                path="/checkout"
+                element={
+                  <ProtectedRoute roles={["CUSTOMER"]}>
+                    <Checkout />
+                  </ProtectedRoute>
+                }
+              />
+
+
+              <Route
+                path="/orders"
+                element={
+                  <ProtectedRoute roles={["CUSTOMER"]}>
+                    <Orders />
+                  </ProtectedRoute>
+                }
+              />
+
+
+              <Route
+                path="/reservations"
+                element={
+                  <ProtectedRoute roles={["CUSTOMER"]}>
+                    <Reservations />
+                  </ProtectedRoute>
+                }
+              />
+
+
+              <Route
+                path="/wishlist"
+                element={
+                  <ProtectedRoute roles={["CUSTOMER"]}>
+                    <Wishlist />
+                  </ProtectedRoute>
+                }
+              />
+
+
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+
+
+
+              {/* VENDOR ROUTES */}
+
+
+              <Route
+                path="/seller/dashboard"
+                element={
+                  <ProtectedRoute roles={["VENDOR"]}>
+                    <VendorDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+
+              <Route
+                path="/add-product"
+                element={
+                  <ProtectedRoute roles={["VENDOR"]}>
+                    <AddProduct />
+                  </ProtectedRoute>
+                }
+              />
+
+
+
+              {/* ADMIN ROUTE */}
+
+
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute roles={["ADMIN"]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+
+            </Routes>
+
 
           </BrowserRouter>
+
         </WishlistProvider>
+
       </CartProvider>
+
     </AuthProvider>
+
   );
+
 }
 
 

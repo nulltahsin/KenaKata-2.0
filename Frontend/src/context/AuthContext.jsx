@@ -1,62 +1,275 @@
-import { createContext, useContext, useState } from 'react';
-import { loginUser, logoutUser, registerUser } from '../services/authService';
+import { createContext, useContext, useState } from "react";
+
+import {
+  loginUser,
+  logoutUser,
+  registerUser,
+} from "../services/authService";
+
 
 const AuthContext = createContext(null);
 
+
 export function AuthProvider({ children }) {
+
+
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('kenakata_user');
-    return saved && localStorage.getItem('token') ? JSON.parse(saved) : null;
-  });
 
-  const login = async (email, password) => {
-    const result = await loginUser(email.trim().toLowerCase(), password);
-    const found = result.user || result;
-    const safe = { id: found.user_id || found.id, name: found.name, email: found.email || email, role: found.role };
-    if (result.token) localStorage.setItem('token', result.token);
-    setUser(safe);
-    localStorage.setItem('kenakata_user', JSON.stringify(safe));
-    return safe;
-  };
+    const savedUser = localStorage.getItem("kenakata_user");
+    const token = localStorage.getItem("token");
 
-  const register = async ({ name, email, password, role, business_name }) => {
-    const result = await registerUser({ name, email, password, role, business_name });
-    const created = result.user || result;
-    const safe = { id: created.user_id || created.id, name: created.name, email: created.email, role: created.role };
-    if (result.token) localStorage.setItem('token', result.token);
-    setUser(safe);
-    localStorage.setItem('kenakata_user', JSON.stringify(safe));
-    return safe;
-  };
-
-  const logout = async () => {
-    try {
-      if (localStorage.getItem('token')) await logoutUser();
-    } catch (error) {
-      console.error('Logout request failed', error);
+    if(savedUser && token){
+      return JSON.parse(savedUser);
     }
 
-    setUser(null);
-    localStorage.removeItem('kenakata_user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('kenakata_cart_guest');
+    return null;
+
+  });
+
+
+
+
+
+  const login = async (email, password) => {
+
+
+    const result = await loginUser(
+      email.trim().toLowerCase(),
+      password
+    );
+
+
+    const found = result.user;
+
+
+    const safeUser = {
+
+      id: found.user_id,
+
+      name: found.name,
+
+      email: email,
+
+      role: found.role
+
+    };
+
+
+
+    localStorage.setItem(
+      "token",
+      result.token
+    );
+
+
+    localStorage.setItem(
+      "kenakata_user",
+      JSON.stringify(safeUser)
+    );
+
+
+    setUser(safeUser);
+
+
+    return safeUser;
+
   };
 
-  const updateUser = (updates) => {
-    const updatedUser = { ...user, ...updates };
-    setUser(updatedUser);
-    localStorage.setItem('kenakata_user', JSON.stringify(updatedUser));
-    return updatedUser;
+
+
+
+
+
+
+
+  const register = async (data) => {
+
+
+    const result = await registerUser(data);
+
+
+    const found = result.user;
+
+
+
+    const safeUser = {
+
+
+      id: found.user_id,
+
+      name: found.name,
+
+      email: found.email,
+
+      role: found.role
+
+
+    };
+
+
+
+    if(result.token){
+
+      localStorage.setItem(
+        "token",
+        result.token
+      );
+
+    }
+
+
+
+    localStorage.setItem(
+      "kenakata_user",
+      JSON.stringify(safeUser)
+    );
+
+
+
+    setUser(safeUser);
+
+
+
+    return safeUser;
+
+
   };
+
+
+
+
+
+
+
+
+
+  const logout = async () => {
+
+
+    try{
+
+
+      if(localStorage.getItem("token")){
+
+        await logoutUser();
+
+      }
+
+
+    }
+    catch(error){
+
+      console.error(
+        "Logout failed:",
+        error
+      );
+
+    }
+
+
+
+
+    localStorage.removeItem("token");
+
+    localStorage.removeItem(
+      "kenakata_user"
+    );
+
+    localStorage.removeItem(
+      "kenakata_cart_guest"
+    );
+
+
+
+    setUser(null);
+
+
+  };
+
+
+
+
+
+
+
+
+
+  const updateUser = (updates)=>{
+
+
+    const updated = {
+
+      ...user,
+
+      ...updates
+
+    };
+
+
+    setUser(updated);
+
+
+
+    localStorage.setItem(
+
+      "kenakata_user",
+
+      JSON.stringify(updated)
+
+    );
+
+
+
+    return updated;
+
+
+  };
+
+
+
+
+
+
+
+
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateUser }}>
+
+    <AuthContext.Provider
+
+      value={{
+
+        user,
+
+        login,
+
+        register,
+
+        logout,
+
+        updateUser
+
+      }}
+
+    >
+
       {children}
+
     </AuthContext.Provider>
+
   );
+
+
 }
 
+
+
+
+
+
 // eslint-disable-next-line react-refresh/only-export-components
-export function useAuth() {
+export function useAuth(){
+
   return useContext(AuthContext);
+
 }
