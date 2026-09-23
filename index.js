@@ -1,7 +1,11 @@
 const express = require("express");
 const cors = require("cors");
 
-const pool = require("./src/config/db");
+// The root entry point runs with the project root as its working directory.
+// Load the backend's config explicitly so DB credentials are available here too.
+require("dotenv").config({ path: require("path").join(__dirname, "Backend", ".env") });
+
+const pool = require("./Backend/src/config/db");
 
 const app = express();
 
@@ -66,15 +70,15 @@ app.get("/db-test", async (req,res)=>{
 // ===============================
 
 
-const authRoutes = require("./src/routes/authRoutes");
-const productRoutes = require("./src/routes/productRoutes");
-const cartRoutes = require("./src/routes/cartRoutes");
-const orderRoutes = require("./src/routes/orderRoutes");
-const reservationRoutes = require("./src/routes/reservationRoutes");
-const wishlistRoutes = require("./src/routes/wishlistRoutes");
-const marketRoutes = require("./src/routes/marketRoutes");
-const storeRoutes = require("./src/routes/storeRoutes");
-const reviewRoutes = require("./src/routes/reviewRoutes");
+const authRoutes = require("./Backend/src/routes/authRoutes");
+const productRoutes = require("./Backend/src/routes/productRoutes");
+const cartRoutes = require("./Backend/src/routes/cartRoutes");
+const orderRoutes = require("./Backend/src/routes/orderRoutes");
+const reservationRoutes = require("./Backend/src/routes/reservationRoutes");
+const wishlistRoutes = require("./Backend/src/routes/wishlistRoutes");
+const marketRoutes = require("./Backend/src/routes/marketRoutes");
+const storeRoutes = require("./Backend/src/routes/storeRoutes");
+const reviewRoutes = require("./Backend/src/routes/reviewRoutes");
 
 
 
@@ -140,10 +144,17 @@ app.use(
 
 // server start
 
-app.listen(PORT,()=>{
+app.use("/api/admin", require("./Backend/src/routes/adminRoutes"));
+async function startServer() {
+    try {
+        await pool.initializeCustomerTables();
+        app.listen(PORT, () => {
+            console.log(`KenaKata backend running on http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error("Database initialization failed:", error);
+        process.exitCode = 1;
+    }
+}
 
-    console.log(
-        `KenaKata backend running on http://localhost:${PORT}`
-    );
-
-});
+startServer();

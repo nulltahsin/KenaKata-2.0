@@ -13,6 +13,7 @@ function Login() {
   const [error, setError] = useState('');
 
   const roleHome = (role) => {
+    if (role === 'ADMIN') return '/admin/dashboard';
     return role === 'VENDOR' ? '/seller/dashboard' : '/profile';
   };
 

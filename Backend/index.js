@@ -44,8 +44,9 @@ app.use("/api/payments", require("./src/routes/paymentRoutes"));
 
 app.use("/api/products", require("./src/routes/productRoutes"));
 app.use("/api/auth", require("./src/routes/authRoutes"));
-app.use("/api/admin", require("./src/routes/adminRoutes"));
+
 app.use("/api/reviews", require("./src/routes/reviewRoutes"));
+app.use("/api/admin", require("./src//routes/adminRoutes"));
 
 async function startServer() {
   try {
@@ -60,3 +61,4 @@ async function startServer() {
 }
 
 startServer();
+

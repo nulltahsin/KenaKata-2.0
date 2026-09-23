@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { WishlistProvider } from "./context/WishlistContext";
 
@@ -22,13 +22,24 @@ import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
-import AdminDashboard from "./pages/admindashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import AddProduct from "./pages/AddProduct";
 import VendorDashboard from "./pages/VendorDashboard";
 
 import OrderSuccess from "./pages/OrderSuccess";
 
 import Review from "./pages/Review";
+
+function AdminSessionGuard({ children }) {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  if (user?.role === "ADMIN" && location.pathname !== "/admin/dashboard") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return children;
+}
 
 
 function App() {
@@ -43,6 +54,7 @@ function App() {
 
           <BrowserRouter>
 
+            <AdminSessionGuard>
             <Routes>
 
 
@@ -227,9 +239,12 @@ function App() {
                 }
               />
 
+              <Route path="*" element={<Navigate to="/" replace />} />
+
 
 
             </Routes>
+            </AdminSessionGuard>
 
 
           </BrowserRouter>
