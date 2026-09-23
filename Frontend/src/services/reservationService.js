@@ -66,7 +66,8 @@ export async function getReservations() {
     image: reservation.product_image || reservation.image_url || reservation.image || '',
     price: reservation.product_price || reservation.price || null,
     location: reservation.store_location || reservation.location || '',
-    date: reservation.deadline,
+    date: reservation.created_at || reservation.deadline,
+    quantity: reservation.quantity || 1,
     status: reservation.status || 'Pending',
   }));
 }

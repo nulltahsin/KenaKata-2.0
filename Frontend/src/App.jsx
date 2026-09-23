@@ -11,17 +11,24 @@ import Products from "./pages/Products";
 import ProductDetails from "./pages/ProductDetails";
 import Markets from "./pages/Markets";
 import Stores from "./pages/Stores";
+
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import Reservations from "./pages/Reservations";
 import Wishlist from "./pages/Wishlist";
 import Profile from "./pages/Profile";
+
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+
 import AdminDashboard from "./pages/admindashboard";
 import AddProduct from "./pages/AddProduct";
 import VendorDashboard from "./pages/VendorDashboard";
+
+import OrderSuccess from "./pages/OrderSuccess";
+
+import Review from "./pages/Review";
 
 
 function App() {
@@ -84,6 +91,8 @@ function App() {
 
 
 
+
+
               {/* CUSTOMER ROUTES */}
 
 
@@ -97,6 +106,7 @@ function App() {
               />
 
 
+
               <Route
                 path="/checkout"
                 element={
@@ -107,6 +117,7 @@ function App() {
               />
 
 
+
               <Route
                 path="/orders"
                 element={
@@ -115,6 +126,29 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
+              <Route
+  path="/review/:id"
+  element={
+    <ProtectedRoute roles={["CUSTOMER"]}>
+      <Review />
+    </ProtectedRoute>
+  }
+/>
+
+
+
+              {/* ORDER SUCCESS PAGE */}
+
+              <Route
+                path="/order-success/:id"
+                element={
+                  <ProtectedRoute roles={["CUSTOMER"]}>
+                    <OrderSuccess />
+                  </ProtectedRoute>
+                }
+              />
+
 
 
               <Route
@@ -127,6 +161,7 @@ function App() {
               />
 
 
+
               <Route
                 path="/wishlist"
                 element={
@@ -137,6 +172,7 @@ function App() {
               />
 
 
+
               <Route
                 path="/profile"
                 element={
@@ -145,6 +181,9 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
+
+
 
 
 
@@ -161,6 +200,7 @@ function App() {
               />
 
 
+
               <Route
                 path="/add-product"
                 element={
@@ -169,6 +209,9 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
+
+
 
 
 
@@ -183,6 +226,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
 
 
             </Routes>

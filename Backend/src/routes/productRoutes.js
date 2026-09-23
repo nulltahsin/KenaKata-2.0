@@ -30,14 +30,16 @@ router.get("/", async (req, res) => {
     if (store_id) {
       result = await pool.query(
         `SELECT p.*, p.product_id AS id, p.product_id AS product_id,
-          p.stock_qty AS stock, c.category_name, s.store_name
+          p.stock_qty AS stock,
+          p.stock_qty - COALESCE(h.held_quantity, 0) AS available_stock,
+          c.category_name, s.store_name
          FROM products p
          LEFT JOIN categories c ON p.category_id = c.category_id
          LEFT JOIN stores s ON p.store_id = s.store_id
          LEFT JOIN (
            SELECT product_id, COALESCE(SUM(quantity), 0) AS held_quantity
-           FROM product_holds
-           WHERE status = 'active' AND expires_at > NOW()
+           FROM reservations
+             WHERE status = 'Pending' AND expires_at > NOW()
            GROUP BY product_id
          ) h ON h.product_id = p.product_id
          WHERE p.store_id = $1
@@ -48,14 +50,16 @@ router.get("/", async (req, res) => {
     } else {
       result = await pool.query(
         `SELECT p.*, p.product_id AS id, p.product_id AS product_id,
-          p.stock_qty AS stock, c.category_name, s.store_name
+          p.stock_qty AS stock,
+          p.stock_qty - COALESCE(h.held_quantity, 0) AS available_stock,
+          c.category_name, s.store_name
          FROM products p
          LEFT JOIN categories c ON p.category_id = c.category_id
          LEFT JOIN stores s ON p.store_id = s.store_id
          LEFT JOIN (
            SELECT product_id, COALESCE(SUM(quantity), 0) AS held_quantity
-           FROM product_holds
-           WHERE status = 'active' AND expires_at > NOW()
+           FROM reservations
+             WHERE status = 'Pending' AND expires_at > NOW()
            GROUP BY product_id
          ) h ON h.product_id = p.product_id
          WHERE p.stock_qty - COALESCE(h.held_quantity, 0) > 0
@@ -73,7 +77,16 @@ router.get("/", async (req, res) => {
 router.get("/reservable", async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM products WHERE price > 5000 ORDER BY product_id`
+      `SELECT p.*, p.stock_qty - COALESCE(h.held_quantity, 0) AS available_stock
+       FROM products p
+       LEFT JOIN (
+         SELECT product_id, COALESCE(SUM(quantity), 0) AS held_quantity
+         FROM reservations
+         WHERE status = 'Pending' AND expires_at > NOW()
+         GROUP BY product_id
+       ) h ON h.product_id = p.product_id
+       WHERE p.price > 5000
+       ORDER BY p.product_id`
     );
     res.json(result.rows);
   } catch (error) {
@@ -87,6 +100,10 @@ router.post("/", verifyToken, checkRole("VENDOR"), async (req, res) => {
   try {
     const { store_id, category_id, category_names, name, description, image_url, price, stock_qty } = req.body;
     const vendor_id = req.user.user_id;
+
+    if (!Number.isInteger(Number(stock_qty)) || Number(stock_qty) < 0) {
+      return res.status(400).json({ message: "Stock quantity must be a non-negative whole number" });
+    }
 
     const storeCheck = await pool.query(
       `SELECT store_id FROM stores WHERE store_id=$1 AND vendor_id=$2`,
@@ -117,10 +134,17 @@ router.get("/:id", async (req, res) => {
   try {
     const product_id = req.params.id;
     const result = await pool.query(
-      `SELECT p.*, c.category_name, s.store_name 
+       `SELECT p.*, p.stock_qty - COALESCE(h.held_quantity, 0) AS available_stock,
+          c.category_name, s.store_name 
        FROM products p 
        JOIN categories c ON p.category_id = c.category_id 
        JOIN stores s ON p.store_id = s.store_id 
+       LEFT JOIN (
+         SELECT product_id, COALESCE(SUM(quantity), 0) AS held_quantity
+         FROM reservations
+         WHERE status = 'Pending' AND expires_at > NOW()
+         GROUP BY product_id
+       ) h ON h.product_id = p.product_id
        WHERE p.product_id=$1`,
       [product_id]
     );
@@ -141,6 +165,10 @@ router.patch("/:id", verifyToken, checkRole("VENDOR"), async (req, res) => {
     const product_id = req.params.id;
     const vendor_id = req.user.user_id;
     const { name, description, image_url, price, stock_qty, category_id, category_names } = req.body;
+
+    if (!Number.isInteger(Number(stock_qty)) || Number(stock_qty) < 0) {
+      return res.status(400).json({ message: "Stock quantity must be a non-negative whole number" });
+    }
 
     const ownership = await pool.query(
       `SELECT p.product_id FROM products p 

@@ -52,6 +52,33 @@ router.post("/", async (req, res) => {
 
     );
 
+
+
+   await client.query(
+`
+INSERT INTO stores
+(
+    vendor_id,
+    market_id,
+    store_name,
+    address,
+    description,
+    logo_url,
+    category
+)
+VALUES($1,$2,$3,$4,$5,$6,$7)
+`,
+[
+    user_id,
+    1,
+    business_name,
+    'Not provided',
+    '',
+    '',
+    ''
+]
+);
+
     await client.query("COMMIT");
 
     res.status(201).json({
@@ -119,6 +146,36 @@ router.get("/:id",
     res.status(500).json({ message: error.message });
   }
 });
+
+
+ //vendor nijer store er product count dekhbe
+
+router.get(
+"/vendor/me",
+verifyToken,
+checkRole("VENDOR"),
+async(req,res)=>{
+
+const result = await pool.query(
+`
+SELECT *
+FROM products p
+JOIN stores s
+ON p.store_id=s.store_id
+WHERE s.vendor_id=$1
+`,
+[req.user.user_id]
+);
+
+
+res.json(result.rows);
+
+});
+
+
+
+
+
 
 //vendor nijer business information update korte parbe
 

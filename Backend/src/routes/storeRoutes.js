@@ -107,7 +107,7 @@ router.get("/", async (req, res) => {
 
 router.get("/vendor/me", verifyToken, checkRole("VENDOR"), async (req, res) => {
   try {
-    const result = await pool.query(
+    let result = await pool.query(
       `SELECT s.*, m.market_name
        FROM stores s
        LEFT JOIN markets m ON s.market_id = m.market_id
@@ -116,6 +116,36 @@ router.get("/vendor/me", verifyToken, checkRole("VENDOR"), async (req, res) => {
        LIMIT 1`,
       [req.user.user_id]
     );
+
+    if (result.rows.length === 0) {
+      result = await pool.query(
+        `INSERT INTO stores
+           (vendor_id, market_id, store_name, address, description, logo_url, category)
+         SELECT v.user_id, m.market_id, v.business_name, 'Not provided', '', '', ''
+         FROM vendors v
+         CROSS JOIN LATERAL (
+           SELECT market_id
+           FROM markets
+           ORDER BY market_id
+           LIMIT 1
+         ) m
+         WHERE v.user_id=$1
+         RETURNING *`,
+        [req.user.user_id]
+      );
+
+      if (result.rows.length > 0) {
+        const store = await pool.query(
+          `SELECT s.*, m.market_name
+           FROM stores s
+           LEFT JOIN markets m ON s.market_id = m.market_id
+           WHERE s.store_id=$1`,
+          [result.rows[0].store_id]
+        );
+        result = store;
+      }
+    }
+
     res.json(result.rows[0] || null);
   } catch (error) {
     console.error(error);

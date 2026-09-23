@@ -26,12 +26,12 @@ checkRole("CUSTOMER"),
   try {
 
 
-    const { product_id, order_item_id, rating, comment } = req.body;
+    const {  order_item_id, rating, comment } = req.body;
 
 
     const customer_id = req.user.user_id;
     //logged in customer er id
-         if(rating<1 || rating>5){
+         if(Number(rating)<1 || Number(rating)>5){
 
        return res.status(400).json({
 
@@ -44,49 +44,43 @@ checkRole("CUSTOMER"),
 
     //check korbo ei order item ei customer er kina
 
-    const orderCheck = await pool.query(
+   const orderCheck = await pool.query(
+`
+SELECT 
+oi.order_item_id,
+oi.product_id
 
-      `
+FROM order_items oi
 
-      SELECT oi.order_item_id
+JOIN orders o
+ON oi.order_id=o.order_id
 
-      FROM order_items oi
+WHERE oi.order_item_id=$1
 
-      JOIN orders o
+AND o.customer_id=$2
 
-      ON oi.order_id=o.order_id
-
-      WHERE oi.order_item_id=$1
-
-      AND o.customer_id=$2
-
-      `,
-
-      [
-
-        order_item_id,
-
-        customer_id
-
-      ]
-
-    );
+AND o.status='Delivered'
+`,
+[
+ order_item_id,
+ customer_id
+]
+);
 
 
 
     if(orderCheck.rows.length===0){
+        
 
       return res.status(403).json({
-
+     
         message:"You cannot review this product"
 
       });
-
+ 
+      
     }
-
-
-
-
+    const product_id = orderCheck.rows[0].product_id;
 
     const result = await pool.query(
 
@@ -317,6 +311,46 @@ checkRole("CUSTOMER"),
 //specific review dekhar jonno
 
 //check korbo review ta logged in customer er kina
+
+router.get("/vendor",
+verifyToken,
+checkRole("VENDOR"),
+async(req,res)=>{
+console.log("VENDOR REVIEW API HIT");
+const result = await pool.query(
+
+`
+SELECT 
+r.review_id,
+r.rating,
+r.comment,
+p.name AS product_name,
+u.name AS customer_name
+
+FROM reviews r
+
+JOIN products p
+ON r.product_id=p.product_id
+
+JOIN users u
+ON r.customer_id=u.user_id
+
+JOIN stores s
+ON p.store_id=s.store_id
+
+WHERE s.vendor_id=$1
+
+ORDER BY r.review_id DESC
+`,
+[req.user.user_id]
+
+);
+console.log("REVIEWS =",result.rows);
+
+res.json(result.rows);
+
+
+});
 
 router.get("/:id",
 

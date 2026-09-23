@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import "./Home.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -42,7 +43,6 @@ function Home() {
   const featuredMarket = {
     name: marketList[0]?.market_name || "Bashundhara City",
     location: marketList[0]?.location || "Dhaka, Bangladesh",
-    distance: "2.4 km",
     stores: Math.max(1, marketList[0]?.store_count || marketList.length),
     products: productList.length,
   };
@@ -102,11 +102,6 @@ function Home() {
                   <strong>{featuredMarket.stores}</strong>
                   <span>Stores</span>
                 </div>
-
-                <div className="market-distance">
-                  <span>{featuredMarket.distance}</span>
-                  <span>→</span>
-                </div>
               </div>
             </div>
           </div>
@@ -149,7 +144,11 @@ function Home() {
           <div className="category-grid">
             {visibleCategories.length > 0 ? (
               visibleCategories.map((category) => (
-                <a key={category.category_id} href={`/products?category=${encodeURIComponent(category.category_name)}`} className="category-card">
+                <Link
+  key={category.category_id}
+  to={`/products?category=${encodeURIComponent(category.category_name)}`}
+  className="category-card"
+>
                   <div className="category-icon grocery-icon">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
@@ -162,7 +161,7 @@ function Home() {
                     <h3>{category.category_name}</h3>
                     <p>{countProductsByCategory(category.category_name)} items</p>
                   </div>
-                </a>
+                </Link>
               ))
             ) : (
               <div className="category-card empty-category-card">

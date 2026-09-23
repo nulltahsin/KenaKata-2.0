@@ -231,6 +231,55 @@ router.post("/register", async (req,res)=>{
 
             );
 
+
+            const defaultMarket = await client.query(
+
+                `
+                SELECT market_id
+                FROM markets
+                ORDER BY market_id
+                LIMIT 1
+                `
+
+            );
+
+
+            if(defaultMarket.rows.length === 0){
+
+                throw new Error("A market is required before registering a vendor");
+
+            }
+
+
+            await client.query(
+
+                `
+                INSERT INTO stores
+                (
+                    vendor_id,
+                    market_id,
+                    store_name,
+                    address,
+                    description,
+                    logo_url,
+                    category
+                )
+
+                VALUES($1,$2,$3,$4,$5,$6,$7)
+                `,
+
+                [
+                    user_id,
+                    defaultMarket.rows[0].market_id,
+                    business_name,
+                    "Not provided",
+                    "",
+                    "",
+                    ""
+                ]
+
+            );
+
         }
 
 

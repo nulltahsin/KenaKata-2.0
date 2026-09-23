@@ -2,6 +2,28 @@ import { useState } from 'react';
 import { createProduct, deleteProduct, updateProduct } from '../services/productService';
 
 const emptyProduct = { name: '', description: '', image_url: '', category_names: [], price: '', stock_qty: '' };
+const commonCategories = [
+  'Grocery',
+  'Fashion',
+  'Electronics',
+  'Home & Living',
+  'Beauty & Personal Care',
+  'Health & Wellness',
+  'Books & Stationery',
+  'Sports & Fitness',
+  'Toys & Games',
+  'Baby Products',
+  'Jewelry & Accessories',
+  'Shoes & Footwear',
+  'Bags & Luggage',
+  'Furniture',
+  'Kitchen & Dining',
+  'Pet Supplies',
+  'Automotive',
+  'Mobile & Accessories',
+  'Computer & Office',
+  'Fresh Produce'
+];
 
 function ProductManagement({ store, products, onProductsChange }) {
   const [form, setForm] = useState(emptyProduct);
@@ -16,9 +38,12 @@ function ProductManagement({ store, products, onProductsChange }) {
     setError('');
   };
   const cancelEdit = () => { setEditingId(null); setForm(emptyProduct); };
-  const shopCategories = [...new Set((Array.isArray(store.categories) ? store.categories : (store.category || '').split(','))
-    .map((category) => category.trim())
-    .filter(Boolean))];
+  const existingCategories = products.flatMap((product) => [
+    ...(Array.isArray(product.category_names) ? product.category_names : []),
+    product.category_name,
+    product.category
+  ]);
+  const shopCategories = [...new Set([...commonCategories, ...existingCategories].filter(Boolean))];
   const handleCategoryChange = (event) => setForm({ ...form, category_names: [...event.target.selectedOptions].map((option) => option.value) });
 
   async function handleSubmit(event) {
@@ -58,7 +83,7 @@ function ProductManagement({ store, products, onProductsChange }) {
         <label>Product name<input name="name" value={form.name} onChange={handleChange} placeholder="Product name" required /></label>
         <label>Image URL<input type="url" name="image_url" value={form.image_url} onChange={handleChange} placeholder="https://example.com/product.jpg" /></label>
         <label className="vendor-form-wide">Description<textarea name="description" value={form.description} onChange={handleChange} placeholder="Describe this product for customers" rows="3" /></label>
-        <label>Categories<select className="vendor-category-select" name="category_names" multiple value={form.category_names} onChange={handleCategoryChange} required>{shopCategories.map((category) => <option key={category} value={category}>{category}</option>)}</select><small className="vendor-field-hint">Hold Ctrl or Command to select multiple.</small></label>
+        <label>Categories<select className="vendor-category-select" name="category_names" multiple value={form.category_names} onChange={handleCategoryChange} required>{shopCategories.map((category) => <option key={category} value={category}>{category}</option>)}</select><small className="vendor-field-hint">Select one or more categories. Hold Ctrl or Command for multiple.</small></label>
         <label>Price<input type="number" min="0" step="0.01" name="price" value={form.price} onChange={handleChange} required /></label>
         <label>Stock<input type="number" min="0" name="stock_qty" value={form.stock_qty} onChange={handleChange} required /></label>
         {error && <p className="vendor-error vendor-form-wide">{error}</p>}

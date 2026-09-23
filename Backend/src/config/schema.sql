@@ -115,6 +115,9 @@ CREATE TABLE reservations (
     payment_id INTEGER,
     status VARCHAR(20) NOT NULL DEFAULT 'Pending',
     deadline TIMESTAMP NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
 
     FOREIGN KEY (customer_id)
         REFERENCES customers(user_id)
@@ -135,11 +138,14 @@ CREATE TABLE reservations (
     CHECK (
         status IN (
             'Pending',
+            'Completed',
             'Collected',
             'Cancelled',
             'Expired'
         )
-    )
+    ),
+
+    CHECK (quantity > 0)
 );
 
 

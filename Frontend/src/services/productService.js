@@ -11,7 +11,9 @@ function normalizeProduct(product) {
 
     product_id: product.product_id || product.id,
 
-    stock: product.stock_qty ?? product.stock ?? 0,
+    stock: product.available_stock ?? product.stock_qty ?? product.stock ?? 0,
+    stock_qty: product.stock_qty ?? product.stock ?? 0,
+    available_stock: product.available_stock ?? product.stock_qty ?? product.stock ?? 0,
 
     store:
       product.store_name ||
@@ -123,6 +125,9 @@ export async function getProducts(storeId = null) {
 export async function getProductById(id) {
 
 
+
+
+
   const response = await api.get(
     `/api/products/${id}`
   );
@@ -132,6 +137,17 @@ export async function getProductById(id) {
     response.data
   );
 
+}
+
+// ================= GET PRODUCT REVIEWS =================
+
+export async function getProductReviews(productId) {
+
+  const response = await api.get(
+    `/api/reviews/product/${productId}`
+  );
+
+  return response.data;
 }
 
 
@@ -177,41 +193,26 @@ export async function getRelatedProducts(productId) {
         product.product_id !== Number(productId)
     )
 
-    .slice(0,4)
+    .slice(0, 4)
 
     .map(
       normalizeProduct
     );
-
 }
-
-
-
-
-
 
 // ================= WISHLIST PRODUCTS =================
 
 export async function getWishlistProducts() {
 
-
   const response = await api.get(
     "/api/wishlist"
   );
 
-
   return response.data.map(
     product => ({
-
       ...normalizeProduct(product),
-
-      wishlist_id:
-        product.wishlist_id,
-
-      id:
-        product.product_id || product.id
-
+      wishlist_id: product.wishlist_id,
+      id: product.product_id || product.id
     })
   );
-
 }

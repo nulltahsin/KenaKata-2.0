@@ -41,10 +41,11 @@ app.use("/api/reservations", require("./src/routes/reservationRoutes"));
 app.use("/api/wishlist", require("./src/routes/wishlistRoutes"));
 app.use("/api/cart", require("./src/routes/cartRoutes"));
 app.use("/api/payments", require("./src/routes/paymentRoutes"));
-app.use("/api/reviews", require("./src/routes/reviewRoutes"));
+
 app.use("/api/products", require("./src/routes/productRoutes"));
 app.use("/api/auth", require("./src/routes/authRoutes"));
 app.use("/api/admin", require("./src/routes/adminRoutes"));
+app.use("/api/reviews", require("./src/routes/reviewRoutes"));
 
 async function startServer() {
   try {

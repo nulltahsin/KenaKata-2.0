@@ -28,7 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './BookingButton.css';
 
-function BookingButton({ storeName, productName, productId, storeId, label = 'Reserve', className = '', onSuccess }) {
+function BookingButton({ storeName, productName, productId, storeId, quantity = 1, label = 'Reserve', className = '', onSuccess, disabled = false }) {
   const navigate = useNavigate();
 
   const handleClick = async (e) => {
@@ -36,6 +36,8 @@ function BookingButton({ storeName, productName, productId, storeId, label = 'Re
     e.stopPropagation();
 
     const token = localStorage.getItem('token');
+    if (disabled) return;
+
     if (!token) {
       navigate('/login');
       return;
@@ -49,6 +51,7 @@ function BookingButton({ storeName, productName, productId, storeId, label = 'Re
         productId: resolvedProductId,
         store_id: resolvedStoreId,
         storeId: resolvedStoreId,
+        quantity: Number(quantity) || 1,
         deadline: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
       });
 
@@ -62,7 +65,7 @@ function BookingButton({ storeName, productName, productId, storeId, label = 'Re
   };
 
   return (
-    <button className={`booking-btn ${className}`} onClick={handleClick}>
+    <button className={`booking-btn ${className}`} onClick={handleClick} disabled={disabled}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="3" y="4" width="18" height="18" rx="2"></rect>
         <line x1="16" y1="2" x2="16" y2="6"></line>

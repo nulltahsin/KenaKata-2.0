@@ -74,7 +74,7 @@ const reservationRoutes = require("./src/routes/reservationRoutes");
 const wishlistRoutes = require("./src/routes/wishlistRoutes");
 const marketRoutes = require("./src/routes/marketRoutes");
 const storeRoutes = require("./src/routes/storeRoutes");
-
+const reviewRoutes = require("./src/routes/reviewRoutes");
 
 
 
@@ -125,6 +125,11 @@ app.use(
 app.use(
     "/api/stores",
     storeRoutes
+);
+
+app.use(
+    "/api/reviews",
+    reviewRoutes
 );
 
 

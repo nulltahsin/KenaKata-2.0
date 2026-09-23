@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Toast from './Toast';
-import BookingButton from './BookingButton';
+import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import BookingButton from './BookingButton';
 import './ProductCard.css';
+import Toast from './Toast';
 
 function ProductCard({ product }) {
+  const { user } = useAuth();
   const { addToCart, items } = useCart();
   const { wishlistProductIds, toggleWishlist } = useWishlist();
   const [showToast, setShowToast] = useState(false);
@@ -15,6 +17,7 @@ function ProductCard({ product }) {
   const productId = Number(product?.id || product?.product_id || product?._id);
   const storeId = Number(product?.store_id || product?.storeId) || null;
   const isSaved = wishlistProductIds.includes(productId);
+  const isVendor = user?.role === 'VENDOR';
 
   const cartQuantity = items.find((item) => item.id === product.id)?.quantity || 0;
   const availableStock = Number(product.stock || 0);
@@ -66,15 +69,17 @@ function ProductCard({ product }) {
         <div className="product-card-image">
           <img src={product.image} alt={product.name} />
           {product.tag && <span className="product-tag">{product.tag}</span>}
-          <button
-            className={`wishlist-btn ${isSaved ? 'active' : ''}`}
-            onClick={handleWishlistToggle}
-            aria-label="Add to wishlist"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill={isSaved ? '#11120f' : 'none'} stroke="currentColor" strokeWidth="2">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-            </svg>
-          </button>
+          {!isVendor && (
+            <button
+              className={`wishlist-btn ${isSaved ? 'active' : ''}`}
+              onClick={handleWishlistToggle}
+              aria-label="Add to wishlist"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={isSaved ? '#11120f' : 'none'} stroke="currentColor" strokeWidth="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </button>
+          )}
         </div>
         <div className="product-card-content">
           <div className="product-meta">
@@ -84,23 +89,26 @@ function ProductCard({ product }) {
           <h3 className="product-name">{product.name}</h3>
           <div className="product-footer">
             <span className="product-price">৳{product.price}</span>
-            <div className="product-actions">
-              {product.price > 5000 && (
-                <BookingButton
-                  storeName={product.store}
-                  productName={product.name}
-                  storeId={storeId}
-                  productId={productId}
-                  onSuccess={(message) => {
-                    setToastMessage(message || 'Item reserved successfully!');
-                    setShowToast(true);
-                  }}
-                />
-              )}
-              <button className="add-to-cart-btn" onClick={handleAddToCart} disabled={isOutOfStock}>
-                {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
-              </button>
-            </div>
+            {!isVendor && (
+              <div className="product-actions">
+                {product.price > 5000 && (
+                  <BookingButton
+                    storeName={product.store}
+                    productName={product.name}
+                    storeId={storeId}
+                    disabled={isOutOfStock}
+                    productId={productId}
+                    onSuccess={(message) => {
+                      setToastMessage(message || 'Item reserved successfully!');
+                      setShowToast(true);
+                    }}
+                  />
+                )}
+                <button className="add-to-cart-btn" onClick={handleAddToCart} disabled={isOutOfStock}>
+                  {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </Link>

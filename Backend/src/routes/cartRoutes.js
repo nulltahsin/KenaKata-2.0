@@ -83,13 +83,26 @@ router.post("/add", verifyToken, checkRole("CUSTOMER"), async (req, res) => {
     await client.query("BEGIN");
     await releaseExpiredHolds(client);
 
-    const productResult = await client.query(
-      `SELECT product_id, stock_qty
-       FROM products
-       WHERE product_id = $1
-       FOR UPDATE`,
-      [product_id]
-    );
+ await client.query(
+`
+DELETE FROM product_holds
+WHERE customer_id=$1
+AND product_id=$2
+AND status='expired'
+`,
+[customer_id, product_id]
+);
+
+
+const productResult = await client.query(
+`
+SELECT product_id, stock_qty
+FROM products
+WHERE product_id=$1
+FOR UPDATE
+`,
+[product_id]
+);
 
     if (productResult.rows.length === 0) {
       await client.query("ROLLBACK");
@@ -140,9 +153,21 @@ router.post("/add", verifyToken, checkRole("CUSTOMER"), async (req, res) => {
       );
     } else {
       hold = await client.query(
-        `INSERT INTO product_holds (customer_id, product_id, quantity, expires_at, status)
-         VALUES ($1, $2, $3, NOW() + INTERVAL '${HOLD_MINUTES} minutes', 'active')
-         RETURNING *`,
+        `INSERT INTO product_holds 
+(customer_id, product_id, quantity, expires_at, status)
+
+VALUES
+($1,$2,$3,NOW() + INTERVAL '60 minutes','active')
+
+ON CONFLICT (customer_id, product_id, status)
+
+DO UPDATE SET
+
+quantity = product_holds.quantity + EXCLUDED.quantity,
+
+expires_at = NOW() + INTERVAL '60 minutes'
+
+RETURNING *`,
         [customer_id, product_id, itemQty]
       );
     }
