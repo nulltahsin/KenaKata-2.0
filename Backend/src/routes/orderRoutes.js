@@ -7,6 +7,7 @@ const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
 
 router.post("/", 
@@ -35,7 +36,7 @@ checkRole("CUSTOMER"),
 
      const customer_id = req.user.user_id;  //ekjon customer , onno customer er jonno order place korte parbe na
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
 
       `
 
@@ -57,7 +58,7 @@ checkRole("CUSTOMER"),
 
       [customer_id, total_amount]
 
-    );
+    ));
 
     res.status(201).json(result.rows[0]);
 
@@ -366,8 +367,11 @@ router.patch("/:id/status",    //only vendor can update order status , as it is 
 checkRole("VENDOR"),
 
  async (req, res) => {
+  const client = await pool.connect();
 
   try {
+
+    await client.query("BEGIN");
 
     const order_id = req.params.id;
 
@@ -407,7 +411,7 @@ checkRole("VENDOR"),
 
      //check vendor ownership of order
 
-     const ownership = await pool.query(
+    const ownership = await client.query(
 
       `
 
@@ -448,6 +452,8 @@ checkRole("VENDOR"),
 
      if(ownership.rows.length===0){
 
+      await client.query("ROLLBACK");
+
         return res.status(403).json({
 
           message:"You cannot update this order"
@@ -458,7 +464,7 @@ checkRole("VENDOR"),
 
 
 
-    const result = await pool.query(
+    const result = await client.query(
 
       `
 
@@ -479,7 +485,7 @@ checkRole("VENDOR"),
 
     if(status === "Delivered"){
 
-  const items = await pool.query(
+  const items = await client.query(
     `
     SELECT product_id, quantity
     FROM order_items
@@ -491,7 +497,7 @@ checkRole("VENDOR"),
 
   for(const item of items.rows){
 
-    await pool.query(
+    await client.query(
       `
       UPDATE products
       SET stock_qty = stock_qty - $1
@@ -505,8 +511,10 @@ checkRole("VENDOR"),
 
   }
 
-}
+    
 
+}
+await client.query("COMMIT");
 
     if (result.rows.length === 0) {
 
@@ -527,10 +535,16 @@ checkRole("VENDOR"),
 
   catch (error) {
 
+    await client.query("ROLLBACK");
+
     console.error(error);
 
     res.status(500).json({ message: error.message });
 
+  }
+
+  finally {
+    client.release();
   }
 
 });

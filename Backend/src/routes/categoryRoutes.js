@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../config/db");
+const withTransaction = require("../config/transaction");
 
 router.post("/", async (req, res) => {
   try {
     const { category_name } = req.body;
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
       `
       INSERT INTO categories
       (
@@ -15,7 +16,7 @@ router.post("/", async (req, res) => {
       RETURNING *
       `,
       [category_name]
-    );
+    ));
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error(error);
@@ -44,7 +45,7 @@ router.patch("/:id", async (req, res) => {
   try {
     const category_id = req.params.id;
     const { category_name } = req.body;
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
       `
       UPDATE categories
       SET
@@ -53,7 +54,7 @@ router.patch("/:id", async (req, res) => {
       RETURNING *
       `,
       [category_name, category_id]
-    );
+    ));
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Category not found" });
     }

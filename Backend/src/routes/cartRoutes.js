@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
 async function releaseExpiredHolds(client) {
   await client.query(
@@ -189,14 +190,14 @@ RETURNING *`,
 
 router.delete("/remove/:product_id", verifyToken, checkRole("CUSTOMER"), async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
       `DELETE FROM product_holds
        WHERE customer_id = $1
          AND product_id = $2
          AND status = 'active'
        RETURNING *`,
       [req.user.user_id, req.params.product_id]
-    );
+    ));
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Cart item not found" });
@@ -211,13 +212,13 @@ router.delete("/remove/:product_id", verifyToken, checkRole("CUSTOMER"), async (
 
 router.delete("/clear", verifyToken, checkRole("CUSTOMER"), async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
       `UPDATE product_holds
        SET status = 'expired'
        WHERE customer_id = $1 AND status = 'active'
        RETURNING *`,
       [req.user.user_id]
-    );
+    ));
 
     res.json({ message: "Cart cleared", cleared: result.rowCount || 0 });
   } catch (error) {
@@ -228,13 +229,10 @@ router.delete("/clear", verifyToken, checkRole("CUSTOMER"), async (req, res) => 
 
 router.post("/release-expired", async (req, res) => {
   try {
-    const client = await pool.connect();
-    try {
+    await withTransaction(pool, async (client) => {
       await releaseExpiredHolds(client);
-      res.json({ message: "Expired cart holds released" });
-    } finally {
-      client.release();
-    }
+    });
+    res.json({ message: "Expired cart holds released" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });

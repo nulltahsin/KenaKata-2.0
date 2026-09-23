@@ -6,12 +6,13 @@ const router = express.Router();
 const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
-async function resolveCategoryIds(categoryNames, fallbackCategoryId) {
+async function resolveCategoryIds(client, categoryNames, fallbackCategoryId) {
   const names = [...new Set((Array.isArray(categoryNames) ? categoryNames : []).map((name) => String(name).trim()).filter(Boolean))];
   const ids = [];
   for (const categoryName of names) {
-    const result = await pool.query(
+    const result = await client.query(
       `INSERT INTO categories (category_name) VALUES($1)
        ON CONFLICT (category_name) DO UPDATE SET category_name=EXCLUDED.category_name
        RETURNING category_id`,
@@ -114,15 +115,19 @@ router.post("/", verifyToken, checkRole("VENDOR"), async (req, res) => {
       return res.status(403).json({ message: "You cannot add product to this store" });
     }
 
-    const resolvedCategories = await resolveCategoryIds(category_names, category_id);
-    if (!resolvedCategories.firstId) {
-      return res.status(400).json({ message: "At least one category is required" });
-    }
+    const result = await withTransaction(pool, async (client) => {
+      const resolvedCategories = await resolveCategoryIds(client, category_names, category_id);
+      if (!resolvedCategories.firstId) {
+        const error = new Error("At least one category is required");
+        error.statusCode = 400;
+        throw error;
+      }
 
-    const result = await pool.query(
-      `INSERT INTO products (store_id, category_id, category_names, name, description, image_url, price, stock_qty) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [store_id, resolvedCategories.firstId, resolvedCategories.names, name, description, image_url, price, stock_qty]
-    );
+      return client.query(
+        `INSERT INTO products (store_id, category_id, category_names, name, description, image_url, price, stock_qty) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [store_id, resolvedCategories.firstId, resolvedCategories.names, name, description, image_url, price, stock_qty]
+      );
+    });
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error(error);
@@ -181,20 +186,24 @@ router.patch("/:id", verifyToken, checkRole("VENDOR"), async (req, res) => {
       return res.status(403).json({ message: "You cannot update this product" });
     }
 
-    const resolvedCategories = await resolveCategoryIds(category_names, category_id);
-    if (!resolvedCategories.firstId) {
-      return res.status(400).json({ message: "At least one category is required" });
-    }
+    const result = await withTransaction(pool, async (client) => {
+      const resolvedCategories = await resolveCategoryIds(client, category_names, category_id);
+      if (!resolvedCategories.firstId) {
+        const error = new Error("At least one category is required");
+        error.statusCode = 400;
+        throw error;
+      }
 
-    const result = await pool.query(
-      `UPDATE products SET name=$1, description=$2, image_url=$3, price=$4, stock_qty=$5, category_id=$6, category_names=$7
-       WHERE product_id=$8 RETURNING *`,
-      [name, description, image_url, price, stock_qty, resolvedCategories.firstId, resolvedCategories.names, product_id]
-    );
+      return client.query(
+        `UPDATE products SET name=$1, description=$2, image_url=$3, price=$4, stock_qty=$5, category_id=$6, category_names=$7
+         WHERE product_id=$8 RETURNING *`,
+        [name, description, image_url, price, stock_qty, resolvedCategories.firstId, resolvedCategories.names, product_id]
+      );
+    });
     res.json({ message: "Product updated successfully", product: result.rows[0] });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message });
   }
 });
 
@@ -215,10 +224,10 @@ router.delete("/:id", verifyToken, checkRole("VENDOR"), async (req, res) => {
       return res.status(403).json({ message: "You cannot delete this product" });
     }
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
       `DELETE FROM products WHERE product_id=$1 RETURNING *`,
       [product_id]
-    );
+    ));
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Product not found" });
@@ -226,7 +235,7 @@ router.delete("/:id", verifyToken, checkRole("VENDOR"), async (req, res) => {
     res.json({ message: "Product deleted successfully", product: result.rows[0] });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: error.message });
+    res.status(error.statusCode || 500).json({ message: error.message });
   }
 });
 

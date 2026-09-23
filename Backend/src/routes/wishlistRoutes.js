@@ -7,6 +7,7 @@ const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
 const wishlistTableReady = pool.query(`
   CREATE TABLE IF NOT EXISTS wishlist (
@@ -52,14 +53,14 @@ checkRole("CUSTOMER"),
 
 
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
       `INSERT INTO wishlist (user_id, product_id)
        VALUES ($1, $2)
        ON CONFLICT (user_id, product_id) DO NOTHING
        RETURNING *`,
       [user_id, product_id]
 
-    );
+    ));
 
 
 
@@ -166,7 +167,7 @@ checkRole("CUSTOMER"),
 
           p.stock_qty
 
-      FROM wishlists w
+      FROM wishlist w
 
       JOIN products p
 
@@ -236,7 +237,7 @@ checkRole("CUSTOMER"),
 
     //check korbo wishlist item ta ei customer er kina
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
 
       `
 
@@ -256,7 +257,7 @@ checkRole("CUSTOMER"),
 
       ]
 
-    );
+    ));
 
 
 

@@ -7,6 +7,7 @@ const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
 
 
@@ -136,11 +137,11 @@ router.get("/my", verifyToken, checkRole("CUSTOMER"), async (req, res) => {
 
 router.get("/vendor/me", verifyToken, checkRole("VENDOR"), async (req, res) => {
   try {
-    await pool.query(
+    await withTransaction(pool, (client) => client.query(
       `UPDATE reservations
        SET status = 'Expired'
        WHERE status = 'Pending' AND expires_at <= NOW()`
-    );
+    ));
 
     const result = await pool.query(
       `SELECT r.reservation_id, r.product_id, r.store_id, r.payment_id,

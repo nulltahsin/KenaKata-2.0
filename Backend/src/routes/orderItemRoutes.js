@@ -7,6 +7,7 @@ const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
 
 
@@ -73,7 +74,7 @@ checkRole("CUSTOMER"),
 
 
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
 
       `
 
@@ -109,7 +110,7 @@ checkRole("CUSTOMER"),
 
       ]
 
-    );
+    ));
 
 
     res.status(201).json(result.rows[0]);

@@ -198,13 +198,21 @@ CREATE TABLE order_items (
     CHECK (price_at_purchase >= 0)
 );
 
+CREATE TABLE product_holds (
 
+    hold_id SERIAL PRIMARY KEY,
 
-
-CREATE TABLE wishlists (
-    wishlist_id SERIAL PRIMARY KEY,
     customer_id INTEGER NOT NULL,
+
     product_id INTEGER NOT NULL,
+
+    quantity INTEGER NOT NULL DEFAULT 1,
+
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    expires_at TIMESTAMP NOT NULL,
 
     FOREIGN KEY (customer_id)
         REFERENCES customers(user_id)
@@ -214,7 +222,39 @@ CREATE TABLE wishlists (
         REFERENCES products(product_id)
         ON DELETE CASCADE,
 
-    UNIQUE (customer_id, product_id)
+    CHECK (quantity > 0),
+
+    CHECK (
+        status IN (
+            'active',
+            'completed',
+            'cancelled',
+            'expired'
+        )
+    )
+);
+
+
+CREATE TABLE wishlist (
+
+    id SERIAL PRIMARY KEY,
+
+    user_id INTEGER NOT NULL,
+
+    product_id INTEGER NOT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (product_id)
+        REFERENCES products(product_id)
+        ON DELETE CASCADE,
+
+    UNIQUE(user_id, product_id)
+
 );
 
 
@@ -244,3 +284,107 @@ CREATE TABLE reviews (
 
     UNIQUE (order_item_id)
 );
+
+
+CREATE TABLE reservation_status_logs (
+    reservation_status_log_id SERIAL PRIMARY KEY,
+    reservation_id INTEGER NOT NULL,
+    customer_id INTEGER,
+    vendor_id INTEGER,
+    old_status VARCHAR(20) NOT NULL,
+    new_status VARCHAR(20) NOT NULL,
+    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (reservation_id)
+        REFERENCES reservations(reservation_id)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (customer_id)
+        REFERENCES customers(user_id)
+        ON DELETE SET NULL,
+
+    FOREIGN KEY (vendor_id)
+        REFERENCES vendors(user_id)
+        ON DELETE SET NULL
+);
+
+
+CREATE TABLE order_status_logs (
+    order_status_log_id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    old_status VARCHAR(20) NOT NULL,
+    new_status VARCHAR(20) NOT NULL,
+    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (order_id)
+        REFERENCES orders(order_id)
+        ON DELETE CASCADE
+);
+
+
+CREATE OR REPLACE FUNCTION log_reservation_status_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    reservation_vendor_id INTEGER;
+BEGIN
+    SELECT vendor_id
+    INTO reservation_vendor_id
+    FROM stores
+    WHERE store_id = NEW.store_id;
+
+    INSERT INTO reservation_status_logs
+        (reservation_id, customer_id, vendor_id, old_status, new_status)
+    VALUES
+        (NEW.reservation_id, NEW.customer_id, reservation_vendor_id, OLD.status, NEW.status);
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER reservation_status_history_trigger
+AFTER UPDATE OF status ON reservations
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION log_reservation_status_change();
+
+
+CREATE OR REPLACE FUNCTION validate_product_stock()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.stock_qty IS NULL OR NEW.stock_qty < 0 THEN
+        RAISE EXCEPTION 'Product stock_qty cannot be negative or NULL';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER product_stock_validation_trigger
+BEFORE INSERT OR UPDATE OF stock_qty ON products
+FOR EACH ROW
+EXECUTE FUNCTION validate_product_stock();
+
+
+CREATE OR REPLACE FUNCTION log_order_status_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO order_status_logs
+        (order_id, old_status, new_status)
+    VALUES
+        (NEW.order_id, OLD.status, NEW.status);
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER order_status_history_trigger
+AFTER UPDATE OF status ON orders
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION log_order_status_change();

@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
 
 
@@ -103,6 +104,7 @@ router.post("/", async (req, res) => {
 
   } catch (error) {
 
+    await client.query("ROLLBACK").catch(() => {});
     console.error(error);
 
     res.status(500).json({ message: error.message });
@@ -242,7 +244,8 @@ async (req, res) => {
     const { name, phone, delivery_address } = req.body;
 
 
-    await pool.query(
+    const result = await withTransaction(pool, async (client) => {
+      await client.query(
 
       `
 
@@ -260,11 +263,11 @@ async (req, res) => {
 
       [name, phone, user_id]
 
-    );
+      );
 
 
 
-    const result = await pool.query(
+      return client.query(
 
       `
 
@@ -282,7 +285,8 @@ async (req, res) => {
 
       [delivery_address, user_id]
 
-    );
+      );
+    });
 
 
 

@@ -7,6 +7,7 @@ const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
 
 //review add korbe only CUSTOMER
@@ -22,8 +23,10 @@ router.post("/",
 checkRole("CUSTOMER"),
 
  async (req, res) => {
+  const client = await pool.connect();
 
   try {
+    await client.query("BEGIN");
 
 
     const {  order_item_id, rating, comment } = req.body;
@@ -33,6 +36,7 @@ checkRole("CUSTOMER"),
     //logged in customer er id
          if(Number(rating)<1 || Number(rating)>5){
 
+          await client.query("ROLLBACK");
        return res.status(400).json({
 
             message:"Rating must be between 1 and 5"
@@ -44,7 +48,7 @@ checkRole("CUSTOMER"),
 
     //check korbo ei order item ei customer er kina
 
-   const orderCheck = await pool.query(
+  const orderCheck = await client.query(
 `
 SELECT 
 oi.order_item_id,
@@ -70,6 +74,7 @@ AND o.status='Delivered'
 
 
     if(orderCheck.rows.length===0){
+      await client.query("ROLLBACK");
         
 
       return res.status(403).json({
@@ -82,7 +87,7 @@ AND o.status='Delivered'
     }
     const product_id = orderCheck.rows[0].product_id;
 
-    const result = await pool.query(
+    const result = await client.query(
 
       `
 
@@ -125,6 +130,7 @@ AND o.status='Delivered'
     );
 
 
+    await client.query("COMMIT");
     res.status(201).json({
 
       message:"Review added successfully",
@@ -139,6 +145,7 @@ AND o.status='Delivered'
 
 
   catch(error){
+    await client.query("ROLLBACK");
 
     console.error(error);
 
@@ -148,6 +155,9 @@ AND o.status='Delivered'
 
     });
 
+  }
+  finally {
+    client.release();
   }
 
 });
@@ -459,7 +469,7 @@ checkRole("CUSTOMER"),
 
 
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
 
       `
 
@@ -491,7 +501,7 @@ checkRole("CUSTOMER"),
 
       ]
 
-    );
+    ));
 
 
 
@@ -560,7 +570,7 @@ checkRole("CUSTOMER"),
 
 
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
 
       `
 
@@ -582,7 +592,7 @@ checkRole("CUSTOMER"),
 
       ]
 
-    );
+    ));
 
 
 

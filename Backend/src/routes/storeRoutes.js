@@ -7,6 +7,7 @@ const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
 
 router.post("/",
@@ -29,7 +30,7 @@ checkRole("VENDOR"),
     const vendor_id = req.user.user_id;  //logged in vendor er id, onno vendor er jonno store create korte parbe na
 
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
 
       `
 
@@ -58,7 +59,7 @@ checkRole("VENDOR"),
 
       [vendor_id, market_id, store_name, address, description, logo_url, categoryTags.join(', ')]
 
-    );
+    ));
 
     res.status(201).json(result.rows[0]);
 
@@ -118,7 +119,7 @@ router.get("/vendor/me", verifyToken, checkRole("VENDOR"), async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      result = await pool.query(
+      result = await withTransaction(pool, (client) => client.query(
         `INSERT INTO stores
            (vendor_id, market_id, store_name, address, description, logo_url, category)
          SELECT v.user_id, m.market_id, v.business_name, 'Not provided', '', '', ''
@@ -132,7 +133,7 @@ router.get("/vendor/me", verifyToken, checkRole("VENDOR"), async (req, res) => {
          WHERE v.user_id=$1
          RETURNING *`,
         [req.user.user_id]
-      );
+      ));
 
       if (result.rows.length > 0) {
         const store = await pool.query(
@@ -169,11 +170,11 @@ router.get("/:id", async (req, res) => {
 
       SELECT
 
-          s.store_id,
+            s.store_id,
 
-          s.vendor_id,
+            s.vendor_id,
 
-          s.store_name,
+            s.store_name,
 
           s.address,
 
@@ -243,7 +244,7 @@ checkRole("VENDOR"),
     const vendor_id = req.user.user_id;  //logged in vendor er id
 
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
 
       `
 
@@ -291,7 +292,7 @@ checkRole("VENDOR"),
 
       ]
 
-    );
+    ));
 
 
     if (result.rows.length === 0) {
@@ -360,7 +361,6 @@ checkRole("VENDOR"),
       `,
 
       [store_id]
-
     );
 
 
@@ -377,29 +377,15 @@ checkRole("VENDOR"),
 
 
 
-    const result = await pool.query(
-
+    const result = await withTransaction(pool, (client) => client.query(
       `
-
       DELETE FROM stores
-
       WHERE store_id=$1
-
       AND vendor_id=$2
-
       RETURNING *
-
       `,
-
-      [
-
-        store_id,
-
-        vendor_id
-
-      ]
-
-    );
+      [store_id, vendor_id]
+    ));
 
 
     if (result.rows.length === 0) {

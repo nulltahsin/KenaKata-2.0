@@ -7,6 +7,7 @@ const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 
 const checkRole = require("../middleware/roleMiddleware");
+const withTransaction = require("../config/transaction");
 
 
 
@@ -57,15 +58,11 @@ async (req,res)=>{
         console.error(error);
 
         res.status(500).json({
-
             message:error.message
-
         });
-
     }
 
 });
-
 
 
 
@@ -203,27 +200,18 @@ async(req,res)=>{
         const user_id = req.params.id;
 
 
-        const result = await pool.query(
-
+        const result = await withTransaction(pool, (client) => client.query(
             `
-
             DELETE FROM users
-
             WHERE user_id=$1
-
             RETURNING *
-
             `,
-
             [user_id]
-
-        );
-
+        ));
 
         if(result.rows.length===0){
 
             return res.status(404).json({
-
                 message:"User not found"
 
             });

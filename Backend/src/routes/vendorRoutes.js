@@ -4,6 +4,7 @@ const pool = require("../config/db");
 const verifyToken=require("../middleware/authMiddleware");
 const checkRole=require("../middleware/roleMiddleware");
 const bcrypt = require("bcrypt");
+const withTransaction = require("../config/transaction");
 
 
 router.post("/", async (req, res) => {
@@ -88,6 +89,7 @@ VALUES($1,$2,$3,$4,$5,$6,$7)
     });
   } 
   catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
     console.error(error);
 
     res.status(500).json({ 
@@ -185,6 +187,7 @@ router.patch("/:id",
     verifyToken,
     checkRole("VENDOR"),
     async (req, res) => {
+  let client;
   try {
     const user_id = req.params.id;
     const logged_user_id=req.user.user_id;
@@ -215,11 +218,16 @@ router.patch("/:id",
       return res.status(409).json({ message:"This email is already in use" });
     }
 
+    client = await pool.connect();
+    await client.query("BEGIN");
+
     if(new_password){
       if(!current_password){
+        await client.query("ROLLBACK");
         return res.status(400).json({ message:"Current password is required to set a new password" });
       }
       if(new_password.length < 6){
+        await client.query("ROLLBACK");
         return res.status(400).json({ message:"New password must be at least 6 characters" });
       }
       const passwordResult = await pool.query(
@@ -231,18 +239,18 @@ router.patch("/:id",
         return res.status(400).json({ message:"Current password is incorrect" });
       }
       const passwordHash = await bcrypt.hash(new_password, 10);
-      await pool.query(
+      await client.query(
         `UPDATE users SET name=$1, phone=$2, email=$3, password_hash=$4 WHERE user_id=$5`,
         [name, phone || null, email, passwordHash, user_id]
       );
     } else {
-      await pool.query(
+      await client.query(
         `UPDATE users SET name=$1, phone=$2, email=$3 WHERE user_id=$4`,
         [name, phone || null, email, user_id]
       );
     }
 
-    const result = await pool.query(
+    const result = await client.query(
       `
       UPDATE vendors
       SET
@@ -258,6 +266,8 @@ router.patch("/:id",
       return res.status(404).json({ message: "Vendor not found" });
     }
 
+    await client.query("COMMIT");
+    client.release();
     res.json({
       message: "Vendor profile updated successfully",
       vendor: result.rows[0],
@@ -265,6 +275,10 @@ router.patch("/:id",
   } 
   
   catch (error) {
+    if (client) {
+      await client.query("ROLLBACK").catch(() => {});
+      client.release();
+    }
     console.error(error);
     res.status(500).json({ message: error.message });
   }

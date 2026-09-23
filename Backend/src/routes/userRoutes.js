@@ -5,6 +5,7 @@ const router = express.Router();
 const pool = require("../config/db");
 
 const verifyToken = require("../middleware/authMiddleware");
+const withTransaction = require("../config/transaction");
 
 
 
@@ -119,7 +120,7 @@ async (req, res) => {
 
     const { name, phone } = req.body;
 
-    const result = await pool.query(
+    const result = await withTransaction(pool, (client) => client.query(
 
       `
 
@@ -149,7 +150,7 @@ async (req, res) => {
 
       [name, phone, user_id]
 
-    );
+    ));
 
 
     if (result.rows.length === 0) {
