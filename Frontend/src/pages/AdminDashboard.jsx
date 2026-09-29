@@ -29,6 +29,7 @@ function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [selectedProfile, setSelectedProfile] = useState(null);
 
   useEffect(() => {
     async function loadPortal() {
@@ -134,7 +135,7 @@ function AdminDashboard() {
             <form className="admin-panel admin-form" onSubmit={handleAddMarket}><h3>Add a market</h3><p>Keep the marketplace growing with a real location.</p><label htmlFor="market-name">Market name</label><input id="market-name" value={marketName} onChange={(event) => setMarketName(event.target.value)} required placeholder="e.g. Dhanmondi Bazar" /><label htmlFor="market-location">Location</label><input id="market-location" value={location} onChange={(event) => setLocation(event.target.value)} required placeholder="e.g. Dhanmondi, Dhaka" /><button type="submit" disabled={saving}>{saving ? 'Adding...' : 'Add market'}</button></form>
             <div className="admin-panel admin-list-wrap">
               <div className="admin-search-box"><input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search markets..." aria-label="Search markets" /></div>
-              <div className="admin-list">{loading ? <p className="admin-empty">Loading markets...</p> : filteredMarkets.length === 0 ? <p className="admin-empty">No matching markets.</p> : filteredMarkets.map((market) => <div className="admin-list-row" key={market.market_id}><span className="admin-avatar">M</span><div><strong>{market.market_name}</strong><small>{market.location}</small></div><em>#{market.market_id}</em></div>)}</div>
+              <div className="admin-list">{loading ? <p className="admin-empty">Loading markets...</p> : filteredMarkets.length === 0 ? <p className="admin-empty">No matching markets.</p> : filteredMarkets.map((market) => <button className="admin-list-row admin-profile-trigger" type="button" key={market.market_id} onClick={() => setSelectedProfile({ title: market.market_name, type: 'Market profile', fields: [['Market ID', `#${market.market_id}`], ['Location', market.location || 'Not provided']] })}><span className="admin-avatar">M</span><div><strong>{market.market_name}</strong><small>{market.location}</small></div><em>#{market.market_id}</em></button>)}</div>
             </div>
           </div>
         </section>
@@ -142,7 +143,7 @@ function AdminDashboard() {
         <section className="admin-section" id="shops"><div className="admin-section-heading"><div><p className="admin-kicker">02 / Shops</p><h2>Shop directory</h2></div><span>{filteredShops.length} total</span></div>
           <div className="admin-panel admin-table-wrap">
             <div className="admin-search-box"><input value={shopSearchTerm} onChange={(event) => setShopSearchTerm(event.target.value)} placeholder="Search shops..." aria-label="Search shops" /></div>
-            <table><thead><tr><th>Shop</th><th>Owner</th><th>Market</th><th>Products</th></tr></thead><tbody>{filteredShops.length ? filteredShops.map((shop) => <tr key={shop.store_id}><td>{shop.store_name}</td><td>{shop.owner_name}</td><td>{shop.market_name}</td><td>{shop.product_count}</td></tr>) : <tr><td colSpan="4" className="admin-empty">No matching shops.</td></tr>}</tbody></table>
+            <table><thead><tr><th>Shop</th><th>Owner</th><th>Market</th><th>Products</th></tr></thead><tbody>{filteredShops.length ? filteredShops.map((shop) => <tr key={shop.store_id}><td><button className="admin-table-link" type="button" onClick={() => setSelectedProfile({ title: shop.store_name, type: 'Shop / vendor profile', fields: [['Shop ID', `#${shop.store_id}`], ['Owner', shop.owner_name], ['Market', shop.market_name], ['Products', shop.product_count]] })}>{shop.store_name}</button></td><td>{shop.owner_name}</td><td>{shop.market_name}</td><td>{shop.product_count}</td></tr>) : <tr><td colSpan="4" className="admin-empty">No matching shops.</td></tr>}</tbody></table>
           </div>
         </section>
 
@@ -151,13 +152,14 @@ function AdminDashboard() {
             <div className="admin-search-box"><input value={memberSearchTerm} onChange={(event) => setMemberSearchTerm(event.target.value)} placeholder="Search members..." aria-label="Search members" /></div>
             <table>
               <thead><tr><th>Name</th><th>Email</th></tr></thead>
-              <tbody>{filteredMembers.length ? filteredMembers.map((member) => <tr key={member.user_id}><td>{member.name}</td><td>{member.email}</td></tr>) : <tr><td colSpan="2" className="admin-empty">No matching members.</td></tr>}</tbody>
+              <tbody>{filteredMembers.length ? filteredMembers.map((member) => <tr key={member.user_id}><td><button className="admin-table-link" type="button" onClick={() => setSelectedProfile({ title: member.name, type: 'Member profile', fields: [['Member ID', `#${member.user_id}`], ['Email', member.email], ['Phone', member.phone || 'Not provided'], ['Area / address', member.area || 'Not provided']] })}>{member.name}</button></td><td>{member.email}</td></tr>) : <tr><td colSpan="2" className="admin-empty">No matching members.</td></tr>}</tbody>
             </table>
           </div>
         </section>
 
         <section className="admin-section" id="sales"><div className="admin-section-heading"><div><p className="admin-kicker">04 / Sales</p><h2>Sales overview</h2></div><span>{summary.sales.orders || 0} completed orders</span></div><div className="admin-sales-layout"><div className="admin-panel admin-revenue"><small>Total sales</small><strong>BDT {Number(summary.sales.total || 0).toLocaleString()}</strong><p>Based on non-cancelled orders</p></div><div className="admin-panel admin-table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Amount</th></tr></thead><tbody>{sales.length ? sales.map((sale) => <tr key={sale.order_id}><td>#{sale.order_id}</td><td>{sale.customer_name}</td><td><span className="admin-status">{sale.status}</span></td><td>BDT {Number(sale.total_amount).toLocaleString()}</td></tr>) : <tr><td colSpan="4" className="admin-empty">No sales yet.</td></tr>}</tbody></table></div></div></section>
       </main>
+      {selectedProfile && <div className="admin-profile-backdrop" onClick={() => setSelectedProfile(null)}><section className="admin-profile-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-profile-title" onClick={(event) => event.stopPropagation()}><button className="admin-profile-close" type="button" aria-label="Close profile" onClick={() => setSelectedProfile(null)}>×</button><p className="admin-kicker">{selectedProfile.type}</p><h2 id="admin-profile-title">{selectedProfile.title}</h2><dl>{selectedProfile.fields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section></div>}
     </div>
   );
 }

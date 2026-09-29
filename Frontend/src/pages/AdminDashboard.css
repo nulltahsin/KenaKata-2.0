@@ -378,6 +378,21 @@
   border-bottom: 1px solid #efefeb;
 }
 
+.admin-profile-trigger {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #efefeb;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-profile-trigger:hover {
+  background: #fafaf8;
+}
+
 .admin-list-row:last-child {
   border-bottom: 0;
 }
@@ -448,6 +463,88 @@ td {
   border-top: 1px solid #efefeb;
   color: #4d5651;
   font-size: 13px;
+}
+
+.admin-table-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #111111;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-table-link:hover {
+  text-decoration: underline;
+}
+
+.admin-profile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(17, 17, 17, 0.48);
+}
+
+.admin-profile-dialog {
+  position: relative;
+  width: min(100%, 460px);
+  padding: 30px;
+  border: 1px solid #e5e5e1;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+}
+
+.admin-profile-dialog h2 {
+  margin: 0 36px 22px 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 25px;
+}
+
+.admin-profile-dialog dl {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.admin-profile-dialog dl > div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 14px;
+  padding: 13px 0;
+  border-top: 1px solid #efefeb;
+}
+
+.admin-profile-dialog dt {
+  color: #77807b;
+  font-size: 13px;
+}
+
+.admin-profile-dialog dd {
+  margin: 0;
+  color: #111111;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.admin-profile-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e5e5e1;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #111111;
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 td:first-child {
