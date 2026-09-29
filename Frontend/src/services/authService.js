@@ -80,3 +80,13 @@ export const logoutUser = async () => {
   return response.data;
 
 };
+
+export const getCustomerProfile = async (userId) => {
+  const response = await api.get(`/api/customers/${userId}`);
+  return response.data;
+};
+
+export const updateCustomerProfile = async (userId, profile) => {
+  const response = await api.patch(`/api/customers/${userId}`, profile);
+  return response.data;
+};

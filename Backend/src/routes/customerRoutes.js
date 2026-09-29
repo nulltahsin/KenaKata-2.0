@@ -4,6 +4,7 @@ const pool = require("../config/db");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/roleMiddleware");
 const withTransaction = require("../config/transaction");
+const bcrypt = require("bcrypt");
 
 
 
@@ -241,7 +242,31 @@ async (req, res) => {
 
 
 
-    const { name, phone, delivery_address } = req.body;
+    const { name, phone, delivery_address, current_password, new_password } = req.body;
+
+    let passwordHash = null;
+    const passwordChangeRequested = Boolean(current_password || new_password);
+    if (passwordChangeRequested) {
+      if (typeof current_password !== "string" || !current_password || typeof new_password !== "string" || !new_password) {
+        return res.status(400).json({ message: "Current and new password are both required" });
+      }
+      if (new_password.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters" });
+      }
+
+      const passwordResult = await pool.query(
+        `SELECT password_hash FROM users WHERE user_id=$1 AND role='CUSTOMER'`,
+        [logged_user_id]
+      );
+      if (passwordResult.rows.length === 0) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+      const passwordMatches = await bcrypt.compare(current_password, passwordResult.rows[0].password_hash);
+      if (!passwordMatches) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      passwordHash = await bcrypt.hash(new_password, 10);
+    }
 
 
     const result = await withTransaction(pool, async (client) => {
@@ -255,13 +280,15 @@ async (req, res) => {
 
           name=$1,
 
-          phone=$2
+          phone=$2,
 
-      WHERE user_id=$3
+          password_hash=COALESCE($3, password_hash)
+
+      WHERE user_id=$4 AND role='CUSTOMER'
 
       `,
 
-      [name, phone, user_id]
+      [name, phone, passwordHash, user_id]
 
       );
 
