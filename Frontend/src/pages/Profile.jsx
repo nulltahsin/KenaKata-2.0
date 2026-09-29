@@ -90,10 +90,14 @@ function Profile() {
     ...(user.role === 'VENDOR'
       ? [{ to: '/seller/dashboard', label: 'Vendor Dashboard', desc: 'Manage your shop and sales' }]
       : []),
-    { to: '/orders', label: 'My Orders', desc: 'Track your orders' },
-    { to: '/wishlist', label: 'Wishlist', desc: 'Saved products' },
-    { to: '/reservations', label: 'Reservations', desc: 'Store visit bookings' },
-    { to: '/cart', label: 'Cart', desc: 'Items in your cart' },
+    ...(user.role === 'CUSTOMER'
+      ? [
+          { to: '/orders', label: 'My Orders', desc: 'Track your orders' },
+          { to: '/wishlist', label: 'Wishlist', desc: 'Saved products' },
+          { to: '/reservations', label: 'Reservations', desc: 'Store visit bookings' },
+          { to: '/cart', label: 'Cart', desc: 'Items in your cart' },
+        ]
+      : []),
     ...(user.role === 'ADMIN'
       ? [{ to: '/admin/dashboard', label: 'Manage Markets', desc: 'Add and manage marketplace locations' }]
       : []),
