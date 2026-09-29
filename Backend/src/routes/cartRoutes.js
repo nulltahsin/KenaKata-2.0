@@ -188,6 +188,32 @@ RETURNING *`,
   }
 });
 
+router.patch("/quantity", verifyToken, checkRole("CUSTOMER"), async (req, res) => {
+  const { product_id, quantity } = req.body;
+  const nextQuantity = Number(quantity);
+  if (!product_id || !Number.isInteger(nextQuantity) || nextQuantity < 1) {
+    return res.status(400).json({ message: "Valid product_id and quantity are required" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE product_holds
+       SET quantity = $1, expires_at = NOW() + INTERVAL '60 minutes'
+       WHERE customer_id = $2 AND product_id = $3
+         AND status = 'active' AND expires_at > NOW()
+       RETURNING *`,
+      [nextQuantity, req.user.user_id, product_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Cart item not found" });
+    }
+    res.json({ message: "Cart quantity updated", hold: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.delete("/remove/:product_id", verifyToken, checkRole("CUSTOMER"), async (req, res) => {
   try {
     const result = await withTransaction(pool, (client) => client.query(

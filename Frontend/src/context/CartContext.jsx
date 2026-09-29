@@ -384,16 +384,17 @@ export function CartProvider({ children }) {
     try{
 
 
-      await api.post(
-        "/api/cart/add",
-        {
-
-          product_id:id,
-
-          quantity:difference
-
-        }
-      );
+      if (difference < 0) {
+        await api.patch("/api/cart/quantity", {
+          product_id: id,
+          quantity: newQuantity
+        });
+      } else {
+        await api.post("/api/cart/add", {
+          product_id: id,
+          quantity: difference
+        });
+      }
 
 
       await syncCart();

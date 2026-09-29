@@ -552,23 +552,19 @@ className="summary-item"
 >
 
 
+<div className="summary-item-image">
 <img
-
 src={item.image}
-
 alt={item.name}
-
 />
+</div>
 
-
-<div>
-
-<p>
+<div className="summary-item-info">
+<p className="summary-item-name">
 {item.name}
 </p>
 
-
-<span>
+<span className="summary-item-store">
 Qty {item.quantity}
 </span>
 
@@ -576,7 +572,7 @@ Qty {item.quantity}
 </div>
 
 
-<strong>
+<strong className="summary-item-price">
 ৳
 {item.price*item.quantity}
 </strong>
