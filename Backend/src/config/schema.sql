@@ -1,6 +1,4 @@
-
-
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
@@ -12,7 +10,9 @@ CREATE TABLE users (
 );
 
 
-CREATE TABLE customers (
+
+
+CREATE TABLE IF NOT EXISTS customers (
     user_id INTEGER PRIMARY KEY,
     delivery_address TEXT,
 
@@ -22,7 +22,9 @@ CREATE TABLE customers (
 );
 
 
-CREATE TABLE vendors (
+
+
+CREATE TABLE IF NOT EXISTS vendors (
     user_id INTEGER PRIMARY KEY,
     business_name VARCHAR(150) NOT NULL,
 
@@ -34,14 +36,15 @@ CREATE TABLE vendors (
 
 
 
-CREATE TABLE markets (
+CREATE TABLE IF NOT EXISTS markets (
     market_id SERIAL PRIMARY KEY,
     market_name VARCHAR(150) NOT NULL,
     location VARCHAR(255) NOT NULL
 );
 
 
-CREATE TABLE stores (
+
+CREATE TABLE IF NOT EXISTS stores (
     store_id SERIAL PRIMARY KEY,
     vendor_id INTEGER NOT NULL,
     market_id INTEGER NOT NULL,
@@ -62,13 +65,17 @@ CREATE TABLE stores (
 
 
 
-CREATE TABLE categories (
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS categories (
     category_id SERIAL PRIMARY KEY,
     category_name VARCHAR(100) NOT NULL UNIQUE
 );
 
 
-CREATE TABLE products (
+
+
+CREATE TABLE IF NOT EXISTS products (
     product_id SERIAL PRIMARY KEY,
     store_id INTEGER NOT NULL,
     category_id INTEGER NOT NULL,
@@ -94,7 +101,7 @@ CREATE TABLE products (
 
 
 
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
     pay_id SERIAL PRIMARY KEY,
     method VARCHAR(30) NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
@@ -107,11 +114,14 @@ CREATE TABLE payments (
 
 
 
-CREATE TABLE reservations (
+CREATE TABLE IF NOT EXISTS reservations (
     reservation_id SERIAL PRIMARY KEY,
     customer_id INTEGER NOT NULL,
-    product_id INTEGER NOT NULL,
-    store_id INTEGER NOT NULL,
+
+
+    product_id INTEGER,
+    store_id INTEGER,
+
     payment_id INTEGER,
     status VARCHAR(20) NOT NULL DEFAULT 'Pending',
     deadline TIMESTAMP NOT NULL,
@@ -150,7 +160,8 @@ CREATE TABLE reservations (
 
 
 
-CREATE TABLE orders (
+
+CREATE TABLE IF NOT EXISTS orders (
     order_id SERIAL PRIMARY KEY,
     customer_id INTEGER NOT NULL,
     payment_id INTEGER,
@@ -179,7 +190,9 @@ CREATE TABLE orders (
 );
 
 
-CREATE TABLE order_items (
+
+
+CREATE TABLE IF NOT EXISTS order_items (
     order_item_id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL,
     product_id INTEGER NOT NULL,
@@ -198,20 +211,15 @@ CREATE TABLE order_items (
     CHECK (price_at_purchase >= 0)
 );
 
-CREATE TABLE product_holds (
 
+
+CREATE TABLE IF NOT EXISTS product_holds (
     hold_id SERIAL PRIMARY KEY,
-
     customer_id INTEGER NOT NULL,
-
     product_id INTEGER NOT NULL,
-
     quantity INTEGER NOT NULL DEFAULT 1,
-
     status VARCHAR(20) NOT NULL DEFAULT 'active',
-
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     expires_at TIMESTAMP NOT NULL,
 
     FOREIGN KEY (customer_id)
@@ -231,18 +239,18 @@ CREATE TABLE product_holds (
             'cancelled',
             'expired'
         )
-    )
+    ),
+
+    UNIQUE (customer_id, product_id, status)
 );
 
 
-CREATE TABLE wishlist (
 
+
+CREATE TABLE IF NOT EXISTS wishlist (
     id SERIAL PRIMARY KEY,
-
     user_id INTEGER NOT NULL,
-
     product_id INTEGER NOT NULL,
-
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (user_id)
@@ -253,14 +261,13 @@ CREATE TABLE wishlist (
         REFERENCES products(product_id)
         ON DELETE CASCADE,
 
-    UNIQUE(user_id, product_id)
-
+    UNIQUE (user_id, product_id)
 );
 
 
 
 
-CREATE TABLE reviews (
+CREATE TABLE IF NOT EXISTS reviews (
     review_id SERIAL PRIMARY KEY,
     customer_id INTEGER NOT NULL,
     product_id INTEGER NOT NULL,
@@ -286,7 +293,9 @@ CREATE TABLE reviews (
 );
 
 
-CREATE TABLE reservation_status_logs (
+
+
+CREATE TABLE IF NOT EXISTS reservation_status_logs (
     reservation_status_log_id SERIAL PRIMARY KEY,
     reservation_id INTEGER NOT NULL,
     customer_id INTEGER,
@@ -309,7 +318,9 @@ CREATE TABLE reservation_status_logs (
 );
 
 
-CREATE TABLE order_status_logs (
+
+
+CREATE TABLE IF NOT EXISTS order_status_logs (
     order_status_log_id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL,
     old_status VARCHAR(20) NOT NULL,
@@ -322,6 +333,8 @@ CREATE TABLE order_status_logs (
 );
 
 
+
+
 CREATE OR REPLACE FUNCTION log_reservation_status_change()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -329,19 +342,47 @@ AS $$
 DECLARE
     reservation_vendor_id INTEGER;
 BEGIN
-    SELECT vendor_id
-    INTO reservation_vendor_id
-    FROM stores
-    WHERE store_id = NEW.store_id;
+
+    IF NEW.store_id IS NOT NULL THEN
+
+        SELECT vendor_id
+        INTO reservation_vendor_id
+        FROM stores
+        WHERE store_id = NEW.store_id;
+
+    ELSE
+
+        reservation_vendor_id := NULL;
+
+    END IF;
+
 
     INSERT INTO reservation_status_logs
-        (reservation_id, customer_id, vendor_id, old_status, new_status)
+        (
+            reservation_id,
+            customer_id,
+            vendor_id,
+            old_status,
+            new_status
+        )
     VALUES
-        (NEW.reservation_id, NEW.customer_id, reservation_vendor_id, OLD.status, NEW.status);
+        (
+            NEW.reservation_id,
+            NEW.customer_id,
+            reservation_vendor_id,
+            OLD.status,
+            NEW.status
+        );
 
     RETURN NEW;
+
 END;
 $$;
+
+
+
+DROP TRIGGER IF EXISTS reservation_status_history_trigger
+ON reservations;
 
 CREATE TRIGGER reservation_status_history_trigger
 AFTER UPDATE OF status ON reservations
@@ -350,18 +391,27 @@ WHEN (OLD.status IS DISTINCT FROM NEW.status)
 EXECUTE FUNCTION log_reservation_status_change();
 
 
+-- ==================
 CREATE OR REPLACE FUNCTION validate_product_stock()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
+
     IF NEW.stock_qty IS NULL OR NEW.stock_qty < 0 THEN
-        RAISE EXCEPTION 'Product stock_qty cannot be negative or NULL';
+        RAISE EXCEPTION
+            'Product stock_qty cannot be negative or NULL';
     END IF;
 
     RETURN NEW;
+
 END;
 $$;
+
+
+
+DROP TRIGGER IF EXISTS product_stock_validation_trigger
+ON products;
 
 CREATE TRIGGER product_stock_validation_trigger
 BEFORE INSERT OR UPDATE OF stock_qty ON products
@@ -369,22 +419,157 @@ FOR EACH ROW
 EXECUTE FUNCTION validate_product_stock();
 
 
+
+
 CREATE OR REPLACE FUNCTION log_order_status_change()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
+
     INSERT INTO order_status_logs
-        (order_id, old_status, new_status)
+        (
+            order_id,
+            old_status,
+            new_status
+        )
     VALUES
-        (NEW.order_id, OLD.status, NEW.status);
+        (
+            NEW.order_id,
+            OLD.status,
+            NEW.status
+        );
 
     RETURN NEW;
+
 END;
 $$;
+
+
+
+DROP TRIGGER IF EXISTS order_status_history_trigger
+ON orders;
 
 CREATE TRIGGER order_status_history_trigger
 AFTER UPDATE OF status ON orders
 FOR EACH ROW
 WHEN (OLD.status IS DISTINCT FROM NEW.status)
 EXECUTE FUNCTION log_order_status_change();
+
+
+
+
+CREATE OR REPLACE FUNCTION get_admin_sales_summary()
+RETURNS TABLE (
+    total_sales NUMERIC,
+    total_orders INTEGER,
+    average_order_value NUMERIC
+)
+LANGUAGE SQL
+STABLE
+AS $$
+    SELECT
+        COALESCE(SUM(o.total_amount), 0)::numeric
+            AS total_sales,
+
+        COUNT(o.order_id)::integer
+            AS total_orders,
+
+        COALESCE(AVG(o.total_amount), 0)::numeric
+            AS average_order_value
+
+    FROM orders o
+
+    WHERE o.status <> 'Cancelled';
+$$;
+
+
+
+
+CREATE OR REPLACE FUNCTION get_customer_order_total(
+    p_customer_id INTEGER
+)
+RETURNS NUMERIC
+LANGUAGE SQL
+STABLE
+AS $$
+    SELECT
+        COALESCE(SUM(o.total_amount), 0)::numeric
+
+    FROM orders o
+
+    WHERE o.customer_id = p_customer_id
+      AND o.status <> 'Cancelled';
+$$;
+
+
+
+
+CREATE OR REPLACE PROCEDURE cancel_order_and_restore_stock(
+    p_order_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    current_status VARCHAR(20);
+BEGIN
+
+    -- Lock the order
+    SELECT status
+    INTO current_status
+    FROM orders
+    WHERE order_id = p_order_id
+    FOR UPDATE;
+
+
+    -- Order does not exist
+    IF NOT FOUND THEN
+        RAISE EXCEPTION
+            'Order % does not exist',
+            p_order_id;
+    END IF;
+
+
+    -- Already cancelled
+    IF current_status = 'Cancelled' THEN
+        RAISE EXCEPTION
+            'Order % is already cancelled',
+            p_order_id;
+    END IF;
+
+
+    -- Only Pending or Confirmed orders can be cancelled
+    IF current_status NOT IN ('Pending', 'Confirmed') THEN
+        RAISE EXCEPTION
+            'Order % cannot be cancelled because its current status is %',
+            p_order_id,
+            current_status;
+    END IF;
+
+
+    -- Restore stock.
+    -- SUM() handles multiple order_items
+    -- for the same product correctly.
+    UPDATE products p
+    SET stock_qty =
+        p.stock_qty + stock_restore.total_quantity
+
+    FROM (
+        SELECT
+            product_id,
+            SUM(quantity) AS total_quantity
+        FROM order_items
+        WHERE order_id = p_order_id
+        GROUP BY product_id
+    ) AS stock_restore
+
+    WHERE p.product_id = stock_restore.product_id;
+
+
+    -- Finally cancel the order
+    UPDATE orders
+    SET status = 'Cancelled'
+    WHERE order_id = p_order_id;
+
+END;
+$$;

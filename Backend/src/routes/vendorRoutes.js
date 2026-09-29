@@ -214,6 +214,7 @@ router.patch("/:id",
       `SELECT user_id FROM users WHERE email=$1 AND user_id<>$2`,
       [email, user_id]
     );
+    
     if(existingEmail.rows.length > 0){
       return res.status(409).json({ message:"This email is already in use" });
     }

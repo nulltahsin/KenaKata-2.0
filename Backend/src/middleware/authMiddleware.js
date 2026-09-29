@@ -17,7 +17,8 @@ const verifyToken = (req,res,next)=>{
         }
 
 
-        const token = authHeader.split(" ")[1];
+        const token = authHeader.split(" ")[1]; 
+        //brearer token ke split kore unwanted word 'bearer' theke
 
 
         if(!token){
