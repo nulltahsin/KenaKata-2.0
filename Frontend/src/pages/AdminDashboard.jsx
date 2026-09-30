@@ -8,6 +8,7 @@ import {
   getAdminSales,
   getAdminShops,
   getAdminSummary,
+  getAdminTopVendors,
 } from '../services/adminService';
 import './AdminDashboard.css';
 
@@ -22,6 +23,7 @@ function AdminDashboard() {
   const [members, setMembers] = useState([]);
   const [sales, setSales] = useState([]);
   const [marketAnalytics, setMarketAnalytics] = useState([]);
+  const [topVendors, setTopVendors] = useState([]);
   const [marketName, setMarketName] = useState('');
   const [location, setLocation] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,8 +38,8 @@ function AdminDashboard() {
   useEffect(() => {
     async function loadPortal() {
       try {
-        const [nextSummary, nextMarkets, nextShops, nextMembers, nextSales, nextMarketAnalytics] = await Promise.all([
-          getAdminSummary(), getMarkets(), getAdminShops(), getAdminMembers(), getAdminSales(), getAdminMarketAnalytics(),
+        const [nextSummary, nextMarkets, nextShops, nextMembers, nextSales, nextMarketAnalytics, nextTopVendors] = await Promise.all([
+          getAdminSummary(), getMarkets(), getAdminShops(), getAdminMembers(), getAdminSales(), getAdminMarketAnalytics(), getAdminTopVendors(),
         ]);
         setSummary(nextSummary);
         setMarkets(nextMarkets);
@@ -45,6 +47,7 @@ function AdminDashboard() {
         setMembers(nextMembers);
         setSales(nextSales);
         setMarketAnalytics(nextMarketAnalytics);
+        setTopVendors(nextTopVendors);
       } catch (loadError) {
         console.error(loadError);
         setError('Could not load the admin data. Please try again.');
@@ -105,6 +108,11 @@ function AdminDashboard() {
     return [shop.store_name, shop.owner_name, shop.market_name].some((value) => String(value || '').toLowerCase().includes(query));
   });
 
+  const sortedShops = [...filteredShops].map((shop) => {
+    const vendor = topVendors.find((item) => Number(item.user_id) === Number(shop.vendor_id));
+    return { ...shop, revenue: Number(vendor?.revenue ?? 0), order_count: Number(vendor?.order_count ?? 0) };
+  }).sort((a, b) => b.revenue - a.revenue);
+
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -149,7 +157,7 @@ function AdminDashboard() {
         <section className="admin-section" id="shops"><div className="admin-section-heading"><div><p className="admin-kicker">02 / Shops</p><h2>Shop directory</h2></div><span>{filteredShops.length} total</span></div>
           <div className="admin-panel admin-table-wrap">
             <div className="admin-search-box"><input value={shopSearchTerm} onChange={(event) => setShopSearchTerm(event.target.value)} placeholder="Search shops..." aria-label="Search shops" /></div>
-            <table><thead><tr><th>Shop</th><th>Owner</th><th>Market</th><th>Products</th></tr></thead><tbody>{filteredShops.length ? filteredShops.map((shop) => <tr key={shop.store_id}><td><button className="admin-table-link" type="button" onClick={() => setSelectedProfile({ title: shop.store_name, type: 'Shop / vendor profile', fields: [['Shop ID', `#${shop.store_id}`], ['Owner', shop.owner_name], ['Market', shop.market_name], ['Products', shop.product_count]] })}>{shop.store_name}</button></td><td>{shop.owner_name}</td><td>{shop.market_name}</td><td>{shop.product_count}</td></tr>) : <tr><td colSpan="4" className="admin-empty">No matching shops.</td></tr>}</tbody></table>
+            <table><thead><tr><th>Shop</th><th>Owner</th><th>Market</th><th>Products</th><th>Total revenue</th><th>Total orders</th></tr></thead><tbody>{sortedShops.length ? sortedShops.map((shop) => <tr key={shop.store_id}><td><button className="admin-table-link" type="button" onClick={() => setSelectedProfile({ title: shop.store_name, type: 'Shop / vendor profile', fields: [['Shop ID', `#${shop.store_id}`], ['Owner', shop.owner_name], ['Market', shop.market_name], ['Products', shop.product_count], ['Total revenue', `BDT ${shop.revenue.toLocaleString()}`], ['Total orders', shop.order_count]] })}>{shop.store_name}</button></td><td>{shop.owner_name}</td><td>{shop.market_name}</td><td>{shop.product_count}</td><td>BDT {shop.revenue.toLocaleString()}</td><td>{shop.order_count}</td></tr>) : <tr><td colSpan="6" className="admin-empty">No matching shops.</td></tr>}</tbody></table>
           </div>
         </section>
 

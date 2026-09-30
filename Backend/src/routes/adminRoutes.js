@@ -92,6 +92,7 @@ router.get("/shops", ...adminOnly, async(req,res)=>{
             SELECT
                 s.store_id,
                 s.store_name,
+                s.vendor_id,
                 u.name AS owner_name,
                 m.market_name,
                 COUNT(p.product_id)::int AS product_count
@@ -110,6 +111,7 @@ router.get("/shops", ...adminOnly, async(req,res)=>{
             GROUP BY
                 s.store_id,
                 s.store_name,
+                s.vendor_id,
                 u.name,
                 m.market_name
 

@@ -24,3 +24,8 @@ export async function getAdminMarketAnalytics() {
   const response = await api.get('/api/admin/analytics/markets');
   return response.data;
 }
+
+export async function getAdminTopVendors() {
+  const response = await api.get('/api/admin/analytics/top-vendors');
+  return response.data;
+}
