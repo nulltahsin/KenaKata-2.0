@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS stores (
 
 
 
--- =========================================================
+
 
 CREATE TABLE IF NOT EXISTS categories (
     category_id SERIAL PRIMARY KEY,
@@ -391,7 +391,7 @@ WHEN (OLD.status IS DISTINCT FROM NEW.status)
 EXECUTE FUNCTION log_reservation_status_change();
 
 
--- ==================
+
 CREATE OR REPLACE FUNCTION validate_product_stock()
 RETURNS TRIGGER
 LANGUAGE plpgsql

@@ -245,7 +245,9 @@ async (req, res) => {
     const { name, phone, delivery_address, current_password, new_password } = req.body;
 
     let passwordHash = null;
+
     const passwordChangeRequested = Boolean(current_password || new_password);
+    
     if (passwordChangeRequested) {
       if (typeof current_password !== "string" || !current_password || typeof new_password !== "string" || !new_password) {
         return res.status(400).json({ message: "Current and new password are both required" });

@@ -10,7 +10,7 @@ const { revokeToken } = require("../middleware/tokenBlacklist");
 
 
 
-// ================= REGISTER =================
+
 
 router.post("/register", async (req,res)=>{
 
@@ -355,7 +355,7 @@ router.post("/register", async (req,res)=>{
 
 
 
-// ================= LOGIN =================
+
 
 
 router.post("/login", async(req,res)=>{
@@ -553,7 +553,7 @@ router.post("/login", async(req,res)=>{
 
 
 
-// ================= LOGOUT =================
+
 
 
 router.post("/logout",

@@ -38,7 +38,6 @@ function normalizeProduct(product) {
 
 
 
-// ================= CREATE PRODUCT =================
 
 export async function createProduct(product) {
 
@@ -56,7 +55,6 @@ export async function createProduct(product) {
 
 
 
-// ================= UPDATE PRODUCT =================
 
 export async function updateProduct(productId, product) {
 
@@ -74,7 +72,7 @@ export async function updateProduct(productId, product) {
 
 
 
-// ================= DELETE PRODUCT =================
+
 
 export async function deleteProduct(productId) {
 
@@ -91,7 +89,7 @@ export async function deleteProduct(productId) {
 
 
 
-// ================= GET ALL PRODUCTS =================
+
 
 export async function getProducts(storeId = null) {
 
@@ -120,7 +118,7 @@ export async function getProducts(storeId = null) {
 
 
 
-// ================= GET SINGLE PRODUCT =================
+
 
 export async function getProductById(id) {
 
@@ -139,7 +137,7 @@ export async function getProductById(id) {
 
 }
 
-// ================= GET PRODUCT REVIEWS =================
+
 
 export async function getProductReviews(productId) {
 
@@ -155,7 +153,7 @@ export async function getProductReviews(productId) {
 
 
 
-// ================= RESERVABLE PRODUCTS =================
+
 
 export async function getReservableProducts() {
 
@@ -176,7 +174,7 @@ export async function getReservableProducts() {
 
 
 
-// ================= RELATED PRODUCTS =================
+//
 
 export async function getRelatedProducts(productId) {
 
@@ -200,7 +198,7 @@ export async function getRelatedProducts(productId) {
     );
 }
 
-// ================= WISHLIST PRODUCTS =================
+
 
 export async function getWishlistProducts() {
 

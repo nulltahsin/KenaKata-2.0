@@ -503,9 +503,7 @@ async(req,res)=>{
 });
 
 
-// ===============================
-// DATABASE FUNCTIONS AND PROCEDURE
-// ===============================
+
 
 router.get("/analytics/summary", ...adminOnly, async (req, res) => {
     try {
@@ -544,9 +542,7 @@ router.post("/orders/:id/cancel", ...adminOnly, async (req, res) => {
     }
 });
 
-// ===============================
-// COMPLEX ADMIN ANALYTICS QUERIES
-// ===============================
+
 
 router.get("/analytics/top-products", ...adminOnly, async (req, res) => {
     try {
