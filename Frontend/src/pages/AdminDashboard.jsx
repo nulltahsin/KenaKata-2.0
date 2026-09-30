@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { createMarket, getMarkets } from '../services/storeService';
 import {
   getAdminMembers,
+  getAdminMarketAnalytics,
   getAdminSales,
   getAdminShops,
   getAdminSummary,
@@ -20,6 +21,7 @@ function AdminDashboard() {
   const [shops, setShops] = useState([]);
   const [members, setMembers] = useState([]);
   const [sales, setSales] = useState([]);
+  const [marketAnalytics, setMarketAnalytics] = useState([]);
   const [marketName, setMarketName] = useState('');
   const [location, setLocation] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,14 +36,15 @@ function AdminDashboard() {
   useEffect(() => {
     async function loadPortal() {
       try {
-        const [nextSummary, nextMarkets, nextShops, nextMembers, nextSales] = await Promise.all([
-          getAdminSummary(), getMarkets(), getAdminShops(), getAdminMembers(), getAdminSales(),
+        const [nextSummary, nextMarkets, nextShops, nextMembers, nextSales, nextMarketAnalytics] = await Promise.all([
+          getAdminSummary(), getMarkets(), getAdminShops(), getAdminMembers(), getAdminSales(), getAdminMarketAnalytics(),
         ]);
         setSummary(nextSummary);
         setMarkets(nextMarkets);
         setShops(nextShops);
         setMembers(nextMembers);
         setSales(nextSales);
+        setMarketAnalytics(nextMarketAnalytics);
       } catch (loadError) {
         console.error(loadError);
         setError('Could not load the admin data. Please try again.');
@@ -135,7 +138,10 @@ function AdminDashboard() {
             <form className="admin-panel admin-form" onSubmit={handleAddMarket}><h3>Add a market</h3><p>Keep the marketplace growing with a real location.</p><label htmlFor="market-name">Market name</label><input id="market-name" value={marketName} onChange={(event) => setMarketName(event.target.value)} required placeholder="e.g. Dhanmondi Bazar" /><label htmlFor="market-location">Location</label><input id="market-location" value={location} onChange={(event) => setLocation(event.target.value)} required placeholder="e.g. Dhanmondi, Dhaka" /><button type="submit" disabled={saving}>{saving ? 'Adding...' : 'Add market'}</button></form>
             <div className="admin-panel admin-list-wrap">
               <div className="admin-search-box"><input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search markets..." aria-label="Search markets" /></div>
-              <div className="admin-list">{loading ? <p className="admin-empty">Loading markets...</p> : filteredMarkets.length === 0 ? <p className="admin-empty">No matching markets.</p> : filteredMarkets.map((market) => <button className="admin-list-row admin-profile-trigger" type="button" key={market.market_id} onClick={() => setSelectedProfile({ title: market.market_name, type: 'Market profile', fields: [['Market ID', `#${market.market_id}`], ['Location', market.location || 'Not provided']] })}><span className="admin-avatar">M</span><div><strong>{market.market_name}</strong><small>{market.location}</small></div><em>#{market.market_id}</em></button>)}</div>
+              <div className="admin-list">{loading ? <p className="admin-empty">Loading markets...</p> : filteredMarkets.length === 0 ? <p className="admin-empty">No matching markets.</p> : filteredMarkets.map((market) => <button className="admin-list-row admin-profile-trigger" type="button" key={market.market_id} onClick={() => {
+                const analytics = marketAnalytics.find((item) => Number(item.market_id) === Number(market.market_id));
+                setSelectedProfile({ title: market.market_name, type: 'Market profile', fields: [['Market ID', `#${market.market_id}`], ['Location', market.location || 'Not provided'], ['Total stores', analytics?.store_count ?? 0], ['Total revenue', `BDT ${Number(analytics?.revenue ?? 0).toLocaleString()}`], ['Total products', analytics?.product_count ?? 0]] });
+              }}><span className="admin-avatar">M</span><div><strong>{market.market_name}</strong><small>{market.location}</small></div><em>#{market.market_id}</em></button>)}</div>
             </div>
           </div>
         </section>

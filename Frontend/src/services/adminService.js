@@ -19,3 +19,8 @@ export async function getAdminSales() {
   const response = await api.get('/api/admin/sales');
   return response.data;
 }
+
+export async function getAdminMarketAnalytics() {
+  const response = await api.get('/api/admin/analytics/markets');
+  return response.data;
+}
