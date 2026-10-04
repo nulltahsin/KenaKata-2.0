@@ -4,6 +4,7 @@ const cors = require("cors");
 // The root entry point runs with the project root as its working directory.
 // Load the backend's config explicitly so DB credentials are available here too.
 require("dotenv").config({ path: require("path").join(__dirname, "Backend", ".env") });
+require("dotenv").config({ path: require("path").join(__dirname, ".env") });
 
 const pool = require("./Backend/src/config/db");
 
@@ -14,9 +15,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+let initialization;
+app.use(async (req, res, next) => {
+    try {
+        initialization ||= pool.initializeCustomerTables();
+        await initialization;
+        next();
+    } catch (error) {
+        initialization = undefined;
+        console.error("Database initialization failed:", error);
+        res.status(500).json({ message: "Database initialization failed" });
+    }
+});
+
 
 // PORT
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 
 
@@ -145,16 +159,10 @@ app.use(
 // server start
 
 app.use("/api/admin", require("./Backend/src/routes/adminRoutes"));
-async function startServer() {
-    try {
-        await pool.initializeCustomerTables();
-        app.listen(PORT, () => {
-            console.log(`KenaKata backend running on http://localhost:${PORT}`);
-        });
-    } catch (error) {
-        console.error("Database initialization failed:", error);
-        process.exitCode = 1;
-    }
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`KenaKata backend running on http://localhost:${PORT}`);
+    });
 }
 
-startServer();
+module.exports = app;
